@@ -16,6 +16,8 @@
 
 package com.android.dx.rop.cst;
 
+import org.jf.dexlib.Util.Utf8Utils;
+
 import com.android.dx.util.ByteArray;
 import com.android.dx.util.Hex;
 
@@ -77,11 +79,11 @@ public final class CstUtf8 extends Constant {
      * @return {@code non-null;} the converted string
      */
     public static String utf8BytesToString(ByteArray bytes) {
-        int length = bytes.size();
+        /*int length = bytes.size();
         char[] chars = new char[length]; // This is sized to avoid a realloc.
         int outAt = 0;
 
-        for (int at = 0; length > 0; /*at*/) {
+        for (int at = 0; length > 0; ) {
             int v0 = bytes.getUnsignedByte(at);
             char out;
             switch (v0 >> 4) {
@@ -109,10 +111,6 @@ public final class CstUtf8 extends Constant {
                     }
                     int value = ((v0 & 0x1f) << 6) | (v1 & 0x3f);
                     if ((value != 0) && (value < 0x80)) {
-                        /*
-                         * This should have been represented with
-                         * one-byte encoding.
-                         */
                         return throwBadUtf8(v1, at + 1);
                     }
                     out = (char) value;
@@ -136,10 +134,6 @@ public final class CstUtf8 extends Constant {
                     int value = ((v0 & 0x0f) << 12) | ((v1 & 0x3f) << 6) |
                         (v2 & 0x3f);
                     if (value < 0x800) {
-                        /*
-                         * This should have been represented with one- or
-                         * two-byte encoding.
-                         */
                         return throwBadUtf8(v2, at + 2);
                     }
                     out = (char) value;
@@ -155,7 +149,10 @@ public final class CstUtf8 extends Constant {
             outAt++;
         }
 
-        return new String(chars, 0, outAt);
+        return new String(chars, 0, outAt);*/
+        byte[] byteArray = new byte[bytes.size()]; 
+        bytes.getBytes(byteArray, 0);
+        return Utf8Utils.utf8BytesToString(byteArray);
     }
 
     /**
