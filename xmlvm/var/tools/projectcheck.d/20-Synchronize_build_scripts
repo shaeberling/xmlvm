@@ -36,6 +36,15 @@ sync_project_properties () {
 	fi
 }
 
+sync_xmlvm_properties () {
+	check_file "$1"
+	check_file "$2"
+	CHECK=`diff $1 $2 | grep '^[<>]' | grep -v xmlvm.project= | grep -v xmlvm.lib= | grep -v xmlvm.resource= | grep -v bundle.identifier= | grep -v bundle.displayname= | grep -v xmlvm.backend= | grep -v xmlvm.trimmer= | grep -v xmlvm.trimmer.seed= `
+	if [ -n "$CHECK" ] ; then
+		xxdiff $1 $2
+	fi
+}
+
 sync_project_xml () {
 	check_file "$1"
 	check_file "$2"
@@ -65,6 +74,7 @@ sync_file $ILOC/build-Xcode.xml $ALOC/build-Xcode.xml
 sync_file $ILOC/xmlvm.xml $ALOC/xmlvm.xml
 sync_file $ILOC/build-impl.xml $ALOC/build-impl.xml
 sync_file $ILOC/project.xml $ALOC/project.xml
+sync_xmlvm_properties $ILOC/xmlvm.properties $ALOC/xmlvm.properties
 
 # Check files that can not automatically be tested
 if ask "Do you want to skip testing of build.xml between demo projects and template files?" ; then
@@ -85,6 +95,7 @@ for i in $IPHONE_PROJECTS ; do
 	sync_build_xml demo/iphone/ifireworks/build.xml demo/iphone/$i/build.xml
 	sync_project_properties $ILOC/project.properties demo/iphone/$i/nbproject/project.properties
 	sync_build_impl $ILOC/build-impl.xml demo/iphone/$i/nbproject/build-impl.xml
+	sync_xmlvm_properties $ILOC/xmlvm.properties demo/iphone/$i/xmlvm.properties
 
 	rm -f $ILOC/nbproject/xcode.xml 
 done
@@ -98,6 +109,7 @@ for i in $ANDROID_PROJECTS ; do
 	sync_build_xml demo/android/afireworks/build.xml demo/android/$i/build.xml
 	sync_project_properties $ALOC/project.properties demo/android/$i/nbproject/project.properties
 	sync_build_impl $ALOC/build-impl.xml demo/android/$i/nbproject/build-impl.xml
+	sync_xmlvm_properties $ALOC/xmlvm.properties demo/android/$i/xmlvm.properties
 
 	rm -f $ILOC/nbproject/xcode.xml 
 	rm -f $ILOC/nbproject/androidsupport.xml 
