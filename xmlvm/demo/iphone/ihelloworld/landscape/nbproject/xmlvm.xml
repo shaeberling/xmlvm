@@ -71,8 +71,8 @@
 	<target name="clean" depends="-xmlvm-init-target" description="Clean project">
 		<property name="ignore.android.update" value="true"/>
 		<delete dir="nbproject/private"/>
-		<ant antfile="nbproject/build-xcode.xml" target="-target-clean"/>
-		<ant antfile="nbproject/build-java.xml" target="-target-clean"/>
+		<ant antfile="nbproject/build-Xcode.xml" target="-target-clean"/>
+		<ant antfile="nbproject/build-Java.xml" target="-target-clean"/>
 		<!-- clean android project -->
 		<delete dir="build"/>
 		<delete dir="nbproject/private"/>

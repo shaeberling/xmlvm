@@ -60,8 +60,8 @@ ALOC=var/templates/android
 
 # Check template files
 sync_file $ILOC/build.xml $ALOC/build.xml
-sync_file $ILOC/build-java.xml $ALOC/build-java.xml
-sync_file $ILOC/build-xcode.xml $ALOC/build-xcode.xml
+sync_file $ILOC/build-Java.xml $ALOC/build-Java.xml
+sync_file $ILOC/build-Xcode.xml $ALOC/build-Xcode.xml
 sync_file $ILOC/xmlvm.xml $ALOC/xmlvm.xml
 sync_file $ILOC/build-impl.xml $ALOC/build-impl.xml
 sync_file $ILOC/project.xml $ALOC/project.xml
@@ -78,8 +78,8 @@ fi
 # Check iphone target
 for i in $IPHONE_PROJECTS ; do
 	sync_file $ILOC/xmlvm.xml demo/iphone/$i/nbproject/xmlvm.xml
-	sync_file $ILOC/build-java.xml demo/iphone/$i/nbproject/build-java.xml
-	sync_file $ILOC/build-xcode.xml demo/iphone/$i/nbproject/build-xcode.xml
+	sync_file $ILOC/build-Java.xml demo/iphone/$i/nbproject/build-Java.xml
+	sync_file $ILOC/build-Xcode.xml demo/iphone/$i/nbproject/build-Xcode.xml
 
 	sync_project_xml $ILOC/project.xml demo/iphone/$i/nbproject/project.xml
 	sync_build_xml demo/iphone/ifireworks/build.xml demo/iphone/$i/build.xml
@@ -90,9 +90,9 @@ for i in $IPHONE_PROJECTS ; do
 done
 for i in $ANDROID_PROJECTS ; do
 	sync_file $ALOC/xmlvm.xml demo/android/$i/nbproject/xmlvm.xml
-	sync_file $ALOC/build-java.xml demo/android/$i/nbproject/build-java.xml
-	sync_file $ALOC/build-xcode.xml demo/android/$i/nbproject/build-xcode.xml
-	sync_file $ALOC/build-android.xml demo/android/$i/nbproject/build-android.xml
+	sync_file $ALOC/build-Java.xml demo/android/$i/nbproject/build-Java.xml
+	sync_file $ALOC/build-Xcode.xml demo/android/$i/nbproject/build-Xcode.xml
+	sync_file $ALOC/build-Android.xml demo/android/$i/nbproject/build-Android.xml
 
 	sync_project_xml $ALOC/project.xml demo/android/$i/nbproject/project.xml
 	sync_build_xml demo/android/afireworks/build.xml demo/android/$i/build.xml
