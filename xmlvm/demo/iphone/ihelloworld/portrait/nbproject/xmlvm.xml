@@ -84,6 +84,11 @@
 		<delete dir="${build.classes.dir}"/>
 	</target>
 
+	<target name="javadoc" depends="-xmlvm-init">
+		<mkdir dir="${src.gen.dir}"/>
+		<ant antfile="nbproject/build-Java.xml" target="javadoc"/>
+	</target>
+
 	<!-- Forward specialized targets to actual build script - these targets might not exist -->
 	<target name="xcompile" depends="-xmlvm-init-target,-xmlvm-requirement" description="Second level project compilation">
 		<ant antfile="nbproject/build-${config}.xml" target="-target-xcompile"/>
