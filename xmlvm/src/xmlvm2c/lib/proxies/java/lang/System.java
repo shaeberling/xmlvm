@@ -78,7 +78,7 @@ public final class System {
     static {
         initNativeLayer();
         // Fill in the properties from the VM information.
-//        ensureProperties();
+        ensureProperties();
 //        
 //        security = new SecurityManager();
         // Set up standard in, out, and err.
