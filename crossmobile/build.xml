@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="crossmobile" default="install" basedir=".">
+	<description>Builds and installs CrossMobile environment.</description>
+
+	<target name="install">
+		<ant dir="src/xmioslayer" target="jar"/>
+		<ant dir="src/xmbuild" target="jar"/>
+		<copy file="dist/xmioslayer.jar" todir="${user.home}/.mobiledev/lib"/>
+		<copy file="dist/xmbuild.jar" todir="${user.home}/.mobiledev/lib"/>
+	</target>
+
+	<target name="everything" depends="-xmlvm-jar,install">
+		<copy file="dist/xmlvm.jar" todir="${user.home}/.mobiledev/lib"/>
+	</target>
+
+
+	<target name="fastclean">
+		<delete dir="dist"/>
+		<delete dir="build"/>
+		<ant dir="src/xmgui" target="clean"/>
+	</target>	
+
+	<target name="clean" depends="fastclean">
+		<ant dir="xmlvm" target="clean"/>
+		<ant dir="mine" target="clean"/>
+	</target>
+
+	<target name="android">
+		<exec executable="bash" dir="src/xmioslayer">
+			<arg value="select"/>
+			<arg value="android"/>
+		</exec>
+	</target>
+
+	<target name="swing">
+		<exec executable="bash" dir="src/xmioslayer">
+			<arg value="select"/>
+			<arg value="swing"/>
+		</exec>
+	</target>
+
+	<target name="both">
+		<exec executable="bash" dir="src/xmioslayer">
+			<arg value="select"/>
+			<arg value="both"/>
+		</exec>
+	</target>
+
+	<!-- Initialize control properties -->
+	<target name="-init">
+		<available file="xmlvm/build.xml" property="xmlvm.repository.available"/>
+		<available file="dist/xmlvm.jar" property="xmlvm.jar.available"/>
+	</target>
+
+	<!-- Download XMLVM repository -->
+	<target name="-xmlvm-repository" depends="-init" unless="xmlvm.repository.available">
+		<exec executable="svn" failonerror="true">
+			<arg value="co"/>
+			<arg value="https://xmlvm.svn.sourceforge.net/svnroot/xmlvm/trunk/xmlvm"/>
+		</exec>
+	</target>
+
+	<!-- Compile xmlvm.jar -->
+	<target name="-xmlvm-jar" depends="-init,-xmlvm-repository" unless="xmlvm.jar.available">
+		<ant dir="xmlvm" target="jar"/>
+		<move file="xmlvm/dist/xmlvm.jar" tofile="dist/xmlvm.jar"/>
+	</target>
+</project>

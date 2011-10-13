@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/quitmenu"
+          android:icon="@drawable/quitmenu"
+          android:title="@string/quitmenu"/>
+    <item android:id="@+id/aboutmenu"
+          android:icon="@drawable/aboutmenu"
+          android:title="@string/aboutmenu"/>
+<!--
+    <item android:id="@+id/level"
+          android:icon="@drawable/level"
+          android:title="@string/level">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item android:id="@+id/beginner"
+                  android:checked="true"
+                  android:title="@string/beginner" />
+                <item android:id="@+id/intermediate"
+                  android:title="@string/intermediate" />
+                <item android:id="@+id/professional"
+                  android:title="@string/professional" />
+                <item android:id="@+id/impossible"
+                  android:title="@string/impossible" />
+            </group>
+        </menu>
+    </item>
+    <item android:id="@+id/restart"
+          android:icon="@drawable/restart"
+          android:title="@string/restart">
+        <menu>
+            <item android:id="@+id/userfirst"
+                  android:title="@string/userfirst" />
+            <item android:id="@+id/androidfirst"
+                  android:title="@string/androidfirst" />
+            <item android:id="@+id/twousers"
+                  android:title="@string/twousers" />
+            <item android:id="@+id/cancel"
+                  android:title="@string/cancel" />
+        </menu>
+    </item>
+-->
+</menu>

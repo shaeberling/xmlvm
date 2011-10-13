@@ -1,0 +1,7 @@
+FILE: nbproject/project.properties
+	android.sdk.dir : the location of Android SDK
+	google.android.jar : the location of android.jar library
+	google.maps.jar : the location of maps.jar library
+
+FILE: local.properties
+	Everything

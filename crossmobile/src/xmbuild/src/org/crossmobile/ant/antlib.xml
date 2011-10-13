@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<antlib>
+    <typedef name="xmupdate" classname="org.crossmobile.ant.SynchronizeAndroid" onerror="fail"/>
+    <typedef name="xmlibs" classname="org.crossmobile.ant.CloneLibraries" onerror="fail"/>
+    <typedef name="xmprop" classname="org.crossmobile.ant.PropertiesCreator" onerror="fail"/>
+    <typedef name="xmswing" classname="org.crossmobile.ant.SynchronizeSwing" onerror="fail"/>
+    <typedef name="xmconcat" classname="org.crossmobile.ant.ConcatenateLibraries" onerror="fail"/>
+    <typedef name="xmjskeleton" classname="org.crossmobile.ant.JavaSkeletonCreator" onerror="fail"/>
+    <typedef name="xmskeleton" classname="org.crossmobile.ant.ObjCSkeletonCreator" onerror="fail"/>
+</antlib>

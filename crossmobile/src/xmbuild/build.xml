@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="xmbuild" default="jar" basedir=".">
+    <description>Builds, tests, and runs the project xmbuild.</description>
+    <import file="nbproject/build-impl.xml"/>
+
+<!--	<target name="-pre-pre-compile">
+		<exec executable="/opt/local/bin/javacc" dir="src/org/crossmobile/source/parser" failonerror="true">
+			<arg value="ObjC.jj"/>
+		</exec>
+	</target>-->
+
+	<target name="skeleton" depends="jar">
+		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
+		<xmskeleton sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" output="build/skeleton" debug="true"/>
+		<mkdir dir="build/skeleton/classes"/>
+		<javac srcdir="build/skeleton/src" destdir="build/skeleton/classes" source="1.6" target="1.6"/>
+	</target>
+
+	<target name="-post-clean">
+		<delete dir="dist"/>
+		<delete dir="build"/>
+	</target>
+</project>
