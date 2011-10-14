@@ -8,14 +8,35 @@
 			<arg value="ObjC.jj"/>
 		</exec>
 	</target>-->
-
-	<target name="skeleton" depends="jar">
+ 
+ 	<target name="gen-wrappers" depends="jar">
 		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
-		<xmskeleton sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" output="build/skeleton" debug="true"/>
-		<mkdir dir="build/skeleton/classes"/>
-		<javac srcdir="build/skeleton/src" destdir="build/skeleton/classes" source="1.6" target="1.6"/>
+		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
+					output="build/wrappers" 
+					debug="true"
+					option="gen-wrappers"/>
+		<mkdir dir="build/wrappers/java/classes"/>
+		<javac srcdir="build/wrappers/java/src" destdir="build/wrappers/java/classes" source="1.6" target="1.6"/>	
 	</target>
-
+    
+    <target name="gen-java-wrapper" depends="jar">
+		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
+		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
+					output="build/wrappers" 
+					debug="true"
+					option="gen-java-wrappers"/>
+		<mkdir dir="build/wrappers/java/classes"/>
+		<javac srcdir="build/wrappers/java/src" destdir="build/wrappers/java/classes" source="1.6" target="1.6"/>
+	</target>
+	
+	<target name="gen-c-wrapper" depends="jar">
+		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
+		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
+					 output="build/wrappers" 
+					 debug="true"
+					 option="gen-c-wrappers"/>
+	</target>
+	
 	<target name="-post-clean">
 		<delete dir="dist"/>
 		<delete dir="build"/>

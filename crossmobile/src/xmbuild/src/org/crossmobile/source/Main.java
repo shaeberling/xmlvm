@@ -19,21 +19,29 @@ package org.crossmobile.source;
 import java.io.File;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.out.JavaOut;
+import org.crossmobile.source.out.COut;
 
 public class Main {
 
-    private static boolean printProgress = false;
+    private static boolean      printProgress = false;
     //
-    private static final String inputpath = "/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks";
-    //private static final String inputpath = System.getProperty("user.home") + File.separator + "/Works/Development/Mobile/SDK/CrossMobile/Frameworks";
-    private static final String outputpath = System.getProperty("user.home") + File.separator + "output";
+    private static final String inputpath     = "/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks";
+    // private static final String inputpath = System.getProperty("user.home") +
+    // File.separator + "/Works/Development/Mobile/SDK/CrossMobile/Frameworks";
+    private static final String outputpath    = System.getProperty("user.home") + File.separator
+                                                      + "output";
+
 
     public static void main(String[] args) {
-        CLibrary library = CLibrary.construct("org.xmlvm.iphone", new File(inputpath), printProgress);
+        CLibrary library = CLibrary.construct("org.xmlvm.ios", new File(inputpath), printProgress);
         if (printProgress)
             System.out.println("Output");
         JavaOut out = new JavaOut(outputpath);
         out.generate(library);
         out.report();
+
+        COut cout = new COut(outputpath);
+        cout.generate(library);
+
     }
 }
