@@ -34,6 +34,9 @@ public class COut implements Generator {
 
                         @Override
                         public void exec(Writer out) throws IOException {
+                            /*
+                             * Generate the *.m files 
+                             */
                             generateImpl(library, fo, out);
                         }
                     });
@@ -43,6 +46,9 @@ public class COut implements Generator {
 
                         @Override
                         public void exec(Writer out) throws IOException {
+                            /*
+                             * Generate the *.h files
+                             */
                             generateHeader(library, fo, out);
                         }
                     });
@@ -51,14 +57,17 @@ public class COut implements Generator {
 
     private void generateImpl(CLibrary library, CObject object, Writer out) throws IOException {
 
+        /*
+         * Handle the Structs
+         */
         if (object.isStruct()) {
             out.append(BEGIN_IMPL + "\n");
             CStructOutput cStructOutput = new CStructOutput(out, library, object);
             cStructOutput.appendConversionToObjCObject();
             cStructOutput.appendConversionToJavaObject();
+            out.append(END_IMPL + "\n");
             cStructOutput.appendNewObjectCreation();
             cStructOutput.appendContructors();
-            out.append(END_IMPL + "\n");
         }
 
     }
