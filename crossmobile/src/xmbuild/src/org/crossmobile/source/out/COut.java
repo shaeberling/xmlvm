@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.Writer;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
+import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.utils.FileUtils;
 import org.crossmobile.source.utils.WriteCallBack;
 import org.crossmobile.source.cutils.CStructOutput;
@@ -60,8 +61,9 @@ public class COut implements Generator {
         /*
          * Handle the Structs
          */
-        if (object.isStruct()) {
+        if (CStruct.isStruct(object.name)) {
             out.append(BEGIN_IMPL + "\n");
+            out.append("#include \"xmlvm-ios.h\"\n\n");
             CStructOutput cStructOutput = new CStructOutput(out, library, object);
             cStructOutput.appendConversionToObjCObject();
             cStructOutput.appendConversionToJavaObject();
@@ -74,7 +76,7 @@ public class COut implements Generator {
 
     private void generateHeader(CLibrary library, CObject object, Writer out) throws IOException {
 
-        if (object.isStruct()) {
+        if (CStruct.isStruct(object.name)) {
             out.append(BEGIN_DECL + "\n");
             // TO DO: Change the below import statement. The list of include
             // files that define this object

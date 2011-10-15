@@ -37,6 +37,7 @@ public class JavaOut implements Generator {
     protected final static String DUMMYBODY = "{\n\t\tthrow new RuntimeException(\"Stub\");\n\t}\n";
     protected final static String ABSTRACTBODY = ";\n";
     private final String outdir;
+    private static boolean genAnnotation = false;
 
     public JavaOut(String outdir) {
         this.outdir = outdir;
@@ -83,6 +84,11 @@ public class JavaOut implements Generator {
     private void parseObject(CLibrary library, CObject object, Writer out) throws IOException {
         out.append("package ").append(library.getPackagename()).append(";\n");
         out.append("import java.util.*;\n\n");
+        
+        if(genAnnotation == true) {
+            out.append("import org.xmlvm.XMLVMSkeletonOnly;\n\n");
+            out.append("@XMLVMSkeletonOnly\n");
+        }
 
         String type = object.isProtocol() ? (object.hasOptionalMethod() ? "abstract class" : "interface") : "class";
         out.append("public ").append(type).append(" ");
@@ -260,5 +266,9 @@ public class JavaOut implements Generator {
             }
             out.append("</context>\n");
         }
+    }
+    
+    public static void setGenAnnotation(boolean genAnno) {
+        genAnnotation = genAnno;
     }
 }

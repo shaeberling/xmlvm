@@ -29,6 +29,7 @@ public class SkeletonCreator extends Task {
     private File    output;
     private boolean debug;
     private String  option;
+    private boolean genAnnotation;
 
 
     public void setSdkpath(File sdkpath) {
@@ -45,6 +46,10 @@ public class SkeletonCreator extends Task {
 
     public void setOption(String option) {
         this.option = option;
+    }
+    
+    public void setGenAnnotation(boolean genAnnotation) {
+        this.genAnnotation = genAnnotation;
     }
 
     @Override
@@ -69,6 +74,7 @@ public class SkeletonCreator extends Task {
             throw new BuildException("Output directory " + output.getPath()
                     + " should be a directorty.");
 
+        JavaOut.setGenAnnotation(genAnnotation);
         CLibrary library = CLibrary.construct("org.xmlvm.ios", sdkpath, debug);
 
         if (option.equals("gen-c-wrappers")) {
