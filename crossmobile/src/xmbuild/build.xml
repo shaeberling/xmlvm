@@ -11,7 +11,13 @@
  
  	<target name="skeleton" depends="jar">
 		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
-		<xmskeleton sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" output="build/skeleton" debug="true"/>
+		<xmskeleton sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
+					output="build/skeleton" 
+					debug="true" 
+					objectprefix="" 
+					constructorprefix="" 
+					methodprefix="" 
+					packagename="org.xmlvm.ios"/>		
 		<mkdir dir="build/skeleton/classes"/>
 		<javac srcdir="build/skeleton/src" destdir="build/skeleton/classes" source="1.6" target="1.6"/>
 	</target>
@@ -22,7 +28,8 @@
 					output="build/wrappers" 
 					debug="true"
 					option="gen-wrappers"
-					genAnnotation = "true"/>	
+					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
+					packagename="org.xmlvm.ios"/>	
 	</target>
     
     <target name="gen-java-wrapper" depends="jar">
@@ -30,8 +37,9 @@
 		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
 					output="build/wrappers" 
 					debug="true"
-					option="gen-java-wrappers"
-					genAnnotation = "false"/>
+					option = "gen-java-wrapper"
+					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
+					packagename="org.xmlvm.ios"/>
 	</target>
 	
 	<target name="gen-c-wrapper" depends="jar">
@@ -39,7 +47,7 @@
 		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
 					 output="build/wrappers" 
 					 debug="true"
-					 option="gen-c-wrappers"/>
+					 option="gen-c-wrapper"/>
 	</target>
 	
 	<target name="-post-clean">

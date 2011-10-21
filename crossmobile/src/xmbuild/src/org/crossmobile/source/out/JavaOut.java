@@ -37,7 +37,9 @@ public class JavaOut implements Generator {
     protected final static String DUMMYBODY = "{\n\t\tthrow new RuntimeException(\"Stub\");\n\t}\n";
     protected final static String ABSTRACTBODY = ";\n";
     private final String outdir;
-    private static boolean genAnnotation = false;
+    private String objectprefix = "";
+    private String methodprefix = "";
+    private String constructorprefix = "";
 
     public JavaOut(String outdir) {
         this.outdir = outdir;
@@ -85,10 +87,7 @@ public class JavaOut implements Generator {
         out.append("package ").append(library.getPackagename()).append(";\n");
         out.append("import java.util.*;\n\n");
         
-        if(genAnnotation == true) {
-            out.append("import org.xmlvm.XMLVMSkeletonOnly;\n\n");
-            out.append("@XMLVMSkeletonOnly\n");
-        }
+        out.append(objectprefix);
 
         String type = object.isProtocol() ? (object.hasOptionalMethod() ? "abstract class" : "interface") : "class";
         out.append("public ").append(type).append(" ");
@@ -181,6 +180,7 @@ public class JavaOut implements Generator {
     }
 
     private void parseMethod(CObject parent, CMethod m, Writer out) throws IOException {
+        out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
         out.append("\tpublic ");
         if (m.isStatic())
@@ -194,6 +194,7 @@ public class JavaOut implements Generator {
     }
 
     private void parseConstructor(CObject parent, CConstructor c, Writer out) throws IOException {
+        out.append(constructorprefix);
         parseJavadoc(c.getDefinitions(), out);
         out.append("\tpublic ").append(parent.getName()).append("(");
         parseArgumentList(c.getArguments(), parent, c.getEnum(), out);
@@ -201,6 +202,7 @@ public class JavaOut implements Generator {
     }
 
     private void parseDefaultConstructor(String name, Writer out) throws IOException {
+        out.append(constructorprefix);
         out.append("\n\t/** Default constructor */\n\t");
         out.append(name).append("() {}\n");
     }
@@ -268,7 +270,15 @@ public class JavaOut implements Generator {
         }
     }
     
-    public static void setGenAnnotation(boolean genAnno) {
-        genAnnotation = genAnno;
+    public void setConstructorPrefix(String constructorprefix) {
+        this.constructorprefix = constructorprefix;
+    }
+
+    public void setMethodPrefix(String methodprefix) {
+        this.methodprefix = methodprefix;
+    }
+
+    public void setObjectPrefix(String objectprefix) {
+        this.objectprefix = objectprefix;       
     }
 }

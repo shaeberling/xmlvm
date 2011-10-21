@@ -77,7 +77,7 @@ public class CStructOutput {
                             + "_ = n" + (j++) + ";\n");
                 }
             }
-            out.append(BEGIN_WRAPPER + "\n");
+            out.append(END_WRAPPER + "\n");
         }
     }
 

@@ -81,7 +81,7 @@ public class COut implements Generator {
             // TO DO: Change the below import statement. The list of include
             // files that define this object
             // has to be included in the CObject.
-            out.append("#import <CoreGraphics/CoreGraphics.h>");
+            out.append("#import <UIKit/UIKit.h>");
             out.append("\n" + object.getName() + " to" + object.getName() + "(void * obj);\n");
             out.append("JAVA_OBJECT from" + object.getName() + "(" + object.getName() + " obj);\n");
             out.append("#define __ADDITIONAL_INSTANCE_FIELDS_" + object.getcClassName() + "\n");

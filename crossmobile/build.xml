@@ -15,9 +15,9 @@
 
 
 	<target name="fastclean">
-		<delete dir="dist"/>
-		<delete dir="build"/>
 		<ant dir="src/xmgui" target="clean"/>
+		<ant dir="src/xmbuild" target="clean"/>
+		<ant dir="src/xmioslayer" target="clean"/>
 	</target>	
 
 	<target name="clean" depends="fastclean">

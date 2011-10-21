@@ -29,8 +29,8 @@ public class SkeletonCreator extends Task {
     private File    output;
     private boolean debug;
     private String  option;
-    private boolean genAnnotation;
-
+    private String objectprefix = "";
+    private String packagename = "org.xmlvm.ios";
 
     public void setSdkpath(File sdkpath) {
         this.sdkpath = sdkpath;
@@ -48,8 +48,12 @@ public class SkeletonCreator extends Task {
         this.option = option;
     }
     
-    public void setGenAnnotation(boolean genAnnotation) {
-        this.genAnnotation = genAnnotation;
+    public void setObjectprefix(String objectprefix) {
+        this.objectprefix = objectprefix;
+    }
+    
+    public void setPackagename(String packagename) {
+        this.packagename = packagename;
     }
 
     @Override
@@ -74,26 +78,29 @@ public class SkeletonCreator extends Task {
             throw new BuildException("Output directory " + output.getPath()
                     + " should be a directorty.");
 
-        JavaOut.setGenAnnotation(genAnnotation);
-        CLibrary library = CLibrary.construct("org.xmlvm.ios", sdkpath, debug);
+        CLibrary library = CLibrary.construct(packagename, sdkpath, debug);
 
-        if (option.equals("gen-c-wrappers")) {
-            COut out = new COut(output.getPath().concat(File.separator + "c" + File.separator));
-            out.generate(library);
-        } else if (option.equals("gen-java-wrappers")) {
-            JavaOut out = new JavaOut(output.getPath().concat(
-                    File.separator + "java" + File.separator));
-            out.generate(library);
-            out.report();
+        if (option.equals("gen-c-wrapper")) {
+            generateCWrapper(library);
+        } else if (option.equals("gen-java-wrapper")) {
+            generateJavaWrapper(library);
         } else {
-            JavaOut out = new JavaOut(output.getPath().concat(
-                    File.separator + "java" + File.separator));
-            out.generate(library);
-            out.report();
-
-            COut cout = new COut(output.getPath().concat(File.separator + "c" + File.separator));
-            cout.generate(library);
+            generateJavaWrapper(library);
+            generateCWrapper(library);         
         }
 
+    }
+    
+    private void generateJavaWrapper(CLibrary library){
+        JavaOut out = new JavaOut(output.getPath().concat(
+                File.separator + "java" + File.separator));
+        out.setObjectPrefix(objectprefix);
+        out.generate(library);
+        out.report();
+    }
+    
+    private void generateCWrapper(CLibrary library){
+        COut cout = new COut(output.getPath().concat(File.separator + "c" + File.separator));
+        cout.generate(library);
     }
 }
