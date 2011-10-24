@@ -7,47 +7,53 @@
 		<exec executable="/opt/local/bin/javacc" dir="src/org/crossmobile/source/parser" failonerror="true">
 			<arg value="ObjC.jj"/>
 		</exec>
-	</target>-->
+	</target>-->	
  
  	<target name="skeleton" depends="jar">
-		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
-		<xmskeleton sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
+ 		<property file="../../xmlvm.properties"/>
+		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
+		<xmskeleton sdkpath="${sdk.path}" 
 					output="build/skeleton" 
 					debug="true" 
 					objectprefix="" 
 					constructorprefix="" 
 					methodprefix="" 
-					packagename="org.xmlvm.ios"/>		
+					packagename="${package.name}"/>		
 		<mkdir dir="build/skeleton/classes"/>
 		<javac srcdir="build/skeleton/src" destdir="build/skeleton/classes" source="1.6" target="1.6"/>
 	</target>
 	
  	<target name="gen-wrappers" depends="jar">
-		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
-		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
-					output="build/wrappers" 
+ 		<property file="../../xmlvm.properties"/>
+		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
+		<xmskeletongen sdkpath="${sdk.path}" 
+					javaoutput="build/wrappers/java"
+					coutput="build/wrappers/c" 
 					debug="true"
 					option="gen-wrappers"
 					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
-					packagename="org.xmlvm.ios"/>	
+					packagename="${package.name}"/>	
 	</target>
     
     <target name="gen-java-wrapper" depends="jar">
-		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
-		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
-					output="build/wrappers" 
+    	<property file="../../xmlvm.properties"/>
+		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
+		<xmskeletongen sdkpath="${sdk.path}" 
+					javaoutput="build/wrappers/java"
 					debug="true"
 					option = "gen-java-wrapper"
 					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
-					packagename="org.xmlvm.ios"/>
+					packagename="${package.name}"/>
 	</target>
 	
 	<target name="gen-c-wrapper" depends="jar">
-		<taskdef resource="org/crossmobile/ant/antlib.xml" classpath="../../dist/xmbuild.jar" onerror="fail"/>
-		<xmskeletongen sdkpath="/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks" 
-					 output="build/wrappers" 
+		<property file="../../xmlvm.properties"/>
+		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
+		<xmskeletongen sdkpath="${sdk.path}" 
+					 coutput="build/wrappers/c" 
 					 debug="true"
-					 option="gen-c-wrapper"/>
+					 option="gen-c-wrapper"
+					 packagename="${package.name}"/>
 	</target>
 	
 	<target name="-post-clean">

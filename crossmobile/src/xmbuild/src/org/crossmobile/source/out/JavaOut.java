@@ -52,7 +52,7 @@ public class JavaOut implements Generator {
 
         for (CObject o : library.getObjects()) {
             final CObject fo = o;
-            FileUtils.putFile(new File(out, "src" + File.separator + o.getName() + ".java"), new WriteCallBack<Writer>() {
+            FileUtils.putFile(new File(out, o.getName() + ".java"), new WriteCallBack<Writer>() {
 
                 @Override
                 public void exec(Writer out) throws IOException {
@@ -60,7 +60,7 @@ public class JavaOut implements Generator {
                 }
             });
         }
-        FileUtils.putFile(new File(out, "src" + File.separator + "Reference.java"), new WriteCallBack<Writer>() {
+        FileUtils.putFile(new File(out, "Reference.java"), new WriteCallBack<Writer>() {
 
             @Override
             public void exec(Writer out) throws IOException {

@@ -30,7 +30,7 @@ public class COut implements Generator {
 
         for (CObject o : library.getObjects()) {
             final CObject fo = o;
-            FileUtils.putFile(new File(out, "src" + File.separator + o.getcClassName() + ".m"),
+            FileUtils.putFile(new File(out, o.getcClassName() + ".m"),
                     new WriteCallBack<Writer>() {
 
                         @Override
@@ -42,7 +42,7 @@ public class COut implements Generator {
                         }
                     });
 
-            FileUtils.putFile(new File(out, "src" + File.separator + o.getcClassName() + ".h"),
+            FileUtils.putFile(new File(out, o.getcClassName() + ".h"),
                     new WriteCallBack<Writer>() {
 
                         @Override

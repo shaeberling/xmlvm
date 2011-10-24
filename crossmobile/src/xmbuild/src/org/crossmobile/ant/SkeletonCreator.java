@@ -26,7 +26,8 @@ import org.crossmobile.source.out.JavaOut;
 public class SkeletonCreator extends Task {
 
     private File    sdkpath;
-    private File    output;
+    private File    javaoutput;
+    private File    coutput;
     private boolean debug;
     private String  option;
     private String objectprefix = "";
@@ -36,10 +37,14 @@ public class SkeletonCreator extends Task {
         this.sdkpath = sdkpath;
     }
 
-    public void setOutput(File output) {
-        this.output = output;
+    public void setJavaoutput(File javaoutput) {
+        this.javaoutput = javaoutput;
     }
 
+    public void setCoutput(File coutput) {
+        this.coutput = coutput;
+    }
+    
     public void setDebug(boolean debug) {
         this.debug = debug;
     }
@@ -60,8 +65,6 @@ public class SkeletonCreator extends Task {
     public void execute() throws BuildException {
         if (sdkpath == null)
             throw new BuildException("Parameter sdkpath should be defined.");
-        if (output == null)
-            throw new BuildException("Parameter output should be defined.");
         if (option == null)
             throw new BuildException("Parameter option should be defined.");
 
@@ -73,34 +76,55 @@ public class SkeletonCreator extends Task {
                             + sdkpath.getPath()
                             + "\" should be named \"Frameworks\", e.g. it should be something like /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/System/Library/Frameworks");
 
-        output.mkdirs();
-        if (!output.isDirectory())
-            throw new BuildException("Output directory " + output.getPath()
-                    + " should be a directorty.");
 
         CLibrary library = CLibrary.construct(packagename, sdkpath, debug);
 
         if (option.equals("gen-c-wrapper")) {
+            if (coutput == null)
+                throw new BuildException("Parameter output should be defined.");
+            createCOutputDir();
             generateCWrapper(library);
-        } else if (option.equals("gen-java-wrapper")) {
+        } 
+        else if (option.equals("gen-java-wrapper")) {
+            if (javaoutput == null)
+                throw new BuildException("Parameter output should be defined.");
+            createJavaOutputDir();
             generateJavaWrapper(library);
-        } else {
+        } 
+        else {
+            if (coutput == null || javaoutput==null)
+                throw new BuildException("Parameter output should be defined.");
+            createCOutputDir();
+            createJavaOutputDir();
             generateJavaWrapper(library);
             generateCWrapper(library);         
         }
 
     }
     
+    private void createJavaOutputDir(){
+       javaoutput.mkdirs();
+        if (!javaoutput.isDirectory())
+            throw new BuildException("Output directory " + javaoutput.getPath()
+                    + " should be a directorty.");
+    }
+    
+    private void createCOutputDir(){
+        coutput.mkdirs();
+        if (!coutput.isDirectory())
+            throw new BuildException("Output directory " + coutput.getPath()
+                    + " should be a directorty.");
+    }
+    
     private void generateJavaWrapper(CLibrary library){
-        JavaOut out = new JavaOut(output.getPath().concat(
-                File.separator + "java" + File.separator));
+        JavaOut out = new JavaOut(javaoutput.getPath());
         out.setObjectPrefix(objectprefix);
         out.generate(library);
         out.report();
     }
     
     private void generateCWrapper(CLibrary library){
-        COut cout = new COut(output.getPath().concat(File.separator + "c" + File.separator));
+        COut cout = new COut(coutput.getPath());
         cout.generate(library);
     }
 }

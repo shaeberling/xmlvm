@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="crossmobile" default="install" basedir=".">
 	<description>Builds and installs CrossMobile environment.</description>
-
+	
 	<target name="install">
 		<ant dir="src/xmioslayer" target="jar"/>
 		<ant dir="src/xmbuild" target="jar"/>
@@ -65,4 +65,18 @@
 		<ant dir="xmlvm" target="jar"/>
 		<move file="xmlvm/dist/xmlvm.jar" tofile="dist/xmlvm.jar"/>
 	</target>
+	
+	<target name="gen-xmlvm-ios">
+		<ant dir="src/xmbuild" target="jar"/>
+		<property file="xmlvm.properties"/>
+	    <typedef name="xmskeletongen" classname="org.crossmobile.ant.SkeletonCreator" classpath="${classpath}" onerror="fail"/>
+		<xmskeletongen sdkpath="${sdk.path}" 
+					javaoutput="${xmlvm.out.java}"
+					coutput="${xmlvm.out.wrapper}"
+					debug="true"
+					option="gen-wrappers"
+					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
+					packagename="${package.name}"/>	
+	</target>
+
 </project>

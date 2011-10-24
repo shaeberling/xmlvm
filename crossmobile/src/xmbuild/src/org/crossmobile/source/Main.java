@@ -33,7 +33,6 @@ public class Main {
 
 
     public static void main(String[] args) {
-        JavaOut.setGenAnnotation(true);
         CLibrary library = CLibrary.construct("org.xmlvm.ios", new File(inputpath), printProgress);
         if (printProgress)
             System.out.println("Output");
