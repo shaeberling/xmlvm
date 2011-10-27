@@ -76,7 +76,8 @@
 					debug="true"
 					option="gen-wrappers"
 					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
-					packagename="${package.name}"/>	
+					packagename="${package.name}"
+					genReport="false"/>	
 	</target>
 
 </project>

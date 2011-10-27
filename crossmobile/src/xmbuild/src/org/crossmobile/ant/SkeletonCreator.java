@@ -32,6 +32,7 @@ public class SkeletonCreator extends Task {
     private String  option;
     private String objectprefix = "";
     private String packagename = "org.xmlvm.ios";
+    private boolean genReport = true;
 
     public void setSdkpath(File sdkpath) {
         this.sdkpath = sdkpath;
@@ -61,6 +62,10 @@ public class SkeletonCreator extends Task {
         this.packagename = packagename;
     }
 
+    public void setGenReport(boolean genReport){
+        this.genReport =  genReport;
+    }
+    
     @Override
     public void execute() throws BuildException {
         if (sdkpath == null)
@@ -120,7 +125,8 @@ public class SkeletonCreator extends Task {
         JavaOut out = new JavaOut(javaoutput.getPath());
         out.setObjectPrefix(objectprefix);
         out.generate(library);
-        out.report();
+        if(this.genReport == true)
+            out.report();
     }
     
     private void generateCWrapper(CLibrary library){
