@@ -230,59 +230,59 @@
     </idconflicts>
     <conflicts>
         <constructor signature="NSData::byte[]int" type="Data">
-            <citem value="Copy"/>
-            <citem value="Reuse"/>
+            <citem value="Copy" name="initWithBytes:length"/>
+            <citem value="Reuse" name="initWithBytesNoCopy:length"/>
         </constructor>
         <constructor signature="NSData::String" type="File">
-            <citem value="Mapped"/>
-            <citem value="Regular"/>
+            <citem value="Mapped" name="initWithContentsOfMappedFile"/>
+            <citem value="Regular" name="initWithContentsOfFile"/>
         </constructor>
         <constructor signature="NSDate::double" type="ReferenceDate">
-            <citem value="SinceDate"/>
-            <citem value="SinceNow"/>
-            <citem value="Since1970"/>
+            <citem value="SinceDate" name="initWithTimeIntervalSinceReferenceDate"/>
+            <citem value="SinceNow" name="initWithTimeIntervalSinceNow"/>
+            <citem value="Since1970" name="initWithTimeIntervalSince1970"/>
         </constructor>
         <constructor signature="NSFileWrapper::NSData" type="ContentType">
-            <citem value="NSData"/>
-            <citem value="SerializedRepresentation"/>
+            <citem value="NSData" name="initRegularFileWithContents"/>
+            <citem value="SerializedRepresentation" name="initWithSerializedRepresentation"/>
         </constructor>
         <constructor signature="NSFileWrapper::String" type="FileType">
-            <citem value="Regular"/>
-            <citem value="SymbolicLinkWithDestination"/>
+            <citem value="Regular" name="initWithPath"/>
+            <citem value="SymbolicLinkWithDestination" name="initSymbolicLinkWithDestination"/>
         </constructor>
         <constructor signature="NSMutableData::int" type="Data">
-            <citem value="Capacity"/>
-            <citem value="Length"/>
+            <citem value="Capacity" name="initWithCapacity"/>
+            <citem value="Length" name="initWithLength"/>
         </constructor>
         <constructor signature="NSString::byte[]" type="CStringNullTerminated">
-            <citem value="UTF8"/>
-            <citem value="Default"/>
+            <citem value="UTF8" name="initWithUTF8String"/>
+            <citem value="Default" name="initWithCString"/>
         </constructor>
         <constructor signature="NSString::byte[]int" type="CString">
-            <citem value="UTF8"/>
-            <citem value="Default"/>
+            <citem value="UTF8" name="initWithCString:encoding"/>
+            <citem value="Default" name="initWithCString:length"/>
         </constructor>
         <constructor signature="NSString::String" type="Type">
-            <citem value="String"/>
-            <citem value="File"/>
+            <citem value="String" name="initWithString"/>
+            <citem value="File" name="initWithContentsOfFile"/>
         </constructor>
         <constructor signature="NSSocketPort::intintintNSData" type="Location">
-            <citem value="Default"/>
-            <citem value="Remote"/>
+            <citem value="Default" name="initWithProtocolFamily:socketType:protocol:address"/>
+            <citem value="Remote" name="initRemoteWithProtocolFamily:socketType:protocol:address"/>
         </constructor>
         <constructor signature="NSURL::String" type="URLType">
-            <citem value="Any"/>
-            <citem value="FileURL"/>
+            <citem value="Any" name="initWithString"/>
+            <citem value="FileURL" name="initFileURLWithPath"/>
         </constructor>
         <constructor signature="NSURLProtectionSpace::StringintStringStringString" type="ServerType">
-            <citem value="Default"/>
-            <citem value="Proxy"/>
+            <citem value="Default" name="initWithHost:port:protocol:realm:authenticationMethod"/>
+            <citem value="Proxy" name="initWithProxyHost:port:type:realm:authenticationMethod"/>
         </constructor>
 
         <!-- resetnames sets the names to have a generic naming convention, instead of the given form the include file -->
         <constructor signature="UIColor::floatfloatfloatfloat" type="Colorspace" resetnames="true">
-            <citem value="RGBA"/>
-            <citem value="HSBA"/>
+            <citem value="RGBA" name=""/>
+            <citem value="HSBA" name=""/>
         </constructor>
 
         <!-- Ignore these multiple constructors. We NEED to define them to acknowledge -->
@@ -329,5 +329,56 @@
         <delegate pattern=".*Client$"/>
         <delegate pattern=".*Delegate$"/>
     </delegates>
+    
+    <!-- The below classes are currently ignored while generating the C wrappers-->
+    <ignorelist>
+    	<ignore name = "FS"/>
+    	<ignore name = "SEL"/> 	
+    	<ignore name = "IMP"/>
+    	
+    	<ignore name = "SecTrust"/>
+    	<ignore name = "SecCertificate"/>
+    	<ignore name = "SecKey"/>
+    	<ignore name = "SecIdentity"/>
+    	
+    	<ignore name = "NSZone"/>
+    	<ignore name = "NSURLHandle"/>
+    	<ignore name = "CFData"/>
+    	<ignore name = "CFRunLoop"/>
+    	<ignore name = "CFAllocator"/>
+    	<ignore name = "CFURL"/>
+    	<ignore name = "CFArray"/>
+    	<ignore name = "CFRunLoopTimer"/>
+      	<ignore name = "CFRunLoopObserver"/>
+    	<ignore name = "CFRunLoopSource"/>
+    	<ignore name = "CFDictionary"/>
+       	<ignore name = "CGImage"/>
+    	<ignore name = "CGContext"/>
+    	<ignore name = "CGPDFArray"/>
+	   	<ignore name = "CGColor"/>
+       	<ignore name = "CGPDFObject"/>	
+    	<ignore name = "CGPattern"/>
+    	<ignore name = "CGPDFDocument"/>
+    	<ignore name = "CGFont"/>
+    	<ignore name = "CGGradient"/>
+       	<ignore name = "CGDataProvider"/>
+       	<ignore name = "CGPDFDictionary"/>
+       	<ignore name = "CGPDFPage"/>
+    	<ignore name = "CGShading"/>
+    	<ignore name = "CGFunction"/>
+    	<ignore name = "CGColorSpace"/>
+    	<ignore name = "CGLayer"/>
+    	<ignore name = "CGPath"/>
+    	<ignore name = "CMTimeMapping"/>
+    	<ignore name = "CMTimeRange"/>
+    	<ignore name = "CMTime"/>
+    	
+  		<!-- The extraction of variables for the below structures is not trivial  -->
+    	<ignore name = "NSDecimal"/> 
+    	<ignore name = "MIDIValueMap"/>
+    	<ignore name = "IUnknownVTbl"/>
+    	<ignore name = "MIDIDriverInterface"/>
+    	<ignore name = "CVPlanarPixelBufferInfo"/>
+    </ignorelist>
 </advisor>
 

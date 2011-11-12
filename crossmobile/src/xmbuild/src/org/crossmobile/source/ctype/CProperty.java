@@ -17,6 +17,7 @@
 package org.crossmobile.source.ctype;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 import org.crossmobile.source.guru.Reporter;
@@ -29,6 +30,7 @@ public class CProperty extends CAnyMethod {
     private final CType type;
     private final String getter;
     private final String setter;
+    private static HashMap<String, String> propertyDef = new HashMap<String, String>(); 
 
     public CProperty(String name, boolean isAbstract, CType type, String getter, String setter) {
         super(name, isAbstract);
@@ -74,17 +76,30 @@ public class CProperty extends CAnyMethod {
 
         // Find modifiers (name only for first property)
         boolean writable = true;
+        boolean getterChanged = false;
+        boolean setterChanged = false;
+        
         if (mods != null) {
             StringTokenizer tk = new StringTokenizer(mods, ",");
             while (tk.hasMoreElements()) {
                 String cmod = tk.nextToken().trim();
                 if (cmod.equals("readonly"))
                     writable = false;
-                else if (cmod.startsWith("getter"))
+                else if (cmod.startsWith("getter")) {
                     getterL.set(0, getParameterDefinition(cmod.substring(6)));
-                else if (cmod.startsWith("setter"))
+                    getterChanged = true;
+                }
+                else if (cmod.startsWith("setter")) {
                     setterL.set(0, getParameterDefinition(cmod.substring(6)));
+                    setterChanged = true;
+                }
             }
+        }
+        
+      //Store the ObjectiveC definitions for accessing the properties
+        for(int i=0; i<loa.names.size();i++){      
+                propertyDef.put(getterL.get(i), getterChanged? getterL.get(i):loa.names.get(i));
+                propertyDef.put(setterL.get(i), setterChanged? setterL.get(i):loa.names.get(i));
         }
 
         // Add properties
@@ -102,5 +117,9 @@ public class CProperty extends CAnyMethod {
             Reporter.PROPERTY_ERROR.report("missing = sign", cmod);
         cmod = cmod.substring(1).trim();
         return cmod;
+    }
+    
+    public static String getPropertyDef(String method) {
+        return propertyDef.get(method);
     }
 }

@@ -173,4 +173,8 @@ public abstract class CSelector extends CAnyMethod {
             this.argument = argument;
         }
     }
+    
+    public List<String> getNameParts(){
+        return this.nameParts;
+    }
 }

@@ -47,6 +47,7 @@ public class Advisor extends DefaultHandler {
     private static final Map<String, String> methodCanonicals = new HashMap<String, String>();
     private static final Set<String> delegatePatterns = new HashSet<String>();
     private static final Set<String> definedObjects = new HashSet<String>();
+    private static final List<String> ignoreList = new ArrayList<String>();
     //
     private String argsig;
     private List<String> argids;
@@ -54,6 +55,7 @@ public class Advisor extends DefaultHandler {
     private String conname;
     private List<String> conids;
     private boolean conreset;
+    private Map<String, String> conMaps;
     //
     private static String lastfile;
 
@@ -98,12 +100,15 @@ public class Advisor extends DefaultHandler {
             argids.add(at.getValue("object"));
         else if (qName.equals("constructor")) {
             conids = new ArrayList<String>();
+            conMaps = new HashMap<String, String>();
             consig = at.getValue("signature");
             conname = at.getValue("type");
             String resetnames = at.getValue("resetnames");
             conreset = resetnames == null ? false : resetnames.equals("true") || resetnames.equals("yes") || resetnames.equals("1") || resetnames.startsWith("enable");
-        } else if (qName.equals("citem"))
+        } else if (qName.equals("citem")){
             conids.add(at.getValue("value"));
+            conMaps.put(at.getValue("value"), at.getValue("name"));
+        }
         else if (qName.equals("replace")) {
             String replaceTo = at.getValue("with");
             if (replaceTo == null)
@@ -119,6 +124,8 @@ public class Advisor extends DefaultHandler {
             delegatePatterns.add(at.getValue("pattern"));
         else if (qName.equals("object"))
             definedObjects.add(at.getValue("name"));
+        else if (qName.equals("ignore"))
+            ignoreList.add(at.getValue("name"));
     }
 
     @Override
@@ -130,7 +137,7 @@ public class Advisor extends DefaultHandler {
         } else if (qName.equals("constructor")) {
             if (conids.size() < 2 && !conname.equals(""))
                 Reporter.ADVISOR_LOADING_ERROR.report(null, "node coverload needs at least 2 subnodes to be valid");
-            constructorOverload.put(consig, new CEnum(conname, conids, "Advisor", lastfile, conreset));
+            constructorOverload.put(consig, new CEnum(conname, conids, "Advisor", lastfile, conreset, conMaps));
             consig = null;
             conname = null;
             conids = null;
@@ -169,6 +176,10 @@ public class Advisor extends DefaultHandler {
         return data;
     }
 
+    public static boolean isInIgnoreList(String name) {
+        return ignoreList.contains(name);
+    }
+    
     public static Map<String, String> getNameChanges() {
         return nameChanges;
     }

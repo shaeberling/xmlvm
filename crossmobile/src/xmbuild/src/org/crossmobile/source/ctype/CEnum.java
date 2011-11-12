@@ -16,18 +16,26 @@
 
 package org.crossmobile.source.ctype;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+
 import org.crossmobile.source.utils.StringUtils;
 
 public class CEnum extends CProcedural {
 
     private final List<String> values;
     private final boolean resetArgNames;
+    private final Map<String, String> mapping;
 
-    public CEnum(String name, List<String> values, String original, String filename, boolean resetArgNames) {
+    public CEnum(String name, List<String> values, String original, String filename, boolean resetArgNames, Map<String, String> mapping) {
         super(name, original, filename);
         this.values = values;
         this.resetArgNames = resetArgNames;
+        this.mapping = mapping;
     }
 
     public boolean resetsArgNames() {
@@ -36,6 +44,27 @@ public class CEnum extends CProcedural {
 
     public List<String> getValues() {
         return values;
+    }
+    
+    public Map<String, String> getMapping(){
+        return mapping;
+    }
+    
+    public Map<String, List<String>> getNameParts(){
+        
+        HashMap<String, List<String>> map = new HashMap<String, List<String>>(); 
+        
+        Iterator it = mapping.entrySet().iterator();
+        while (it.hasNext()) {
+              List<String> nameParts = new ArrayList<String>();
+              Map.Entry pairs = (Map.Entry)it.next();
+              StringTokenizer st = new StringTokenizer((String) pairs.getValue(), ":");
+              while(st.hasMoreTokens()){
+                  nameParts.add(st.nextToken());
+              }
+              map.put((String) pairs.getKey(), nameParts);
+          }
+        return map;
     }
 
     @Override

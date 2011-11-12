@@ -2,23 +2,21 @@ package org.crossmobile.source.cutils;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CConstructor;
 import org.crossmobile.source.ctype.CLibrary;
+import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CStruct;
+import org.crossmobile.source.guru.Advisor;
 
 public class CStructOutput {
-    private Writer       out;
-    private CLibrary     lib;
-    private CObject      object;
-    private List<String> declarations  = new ArrayList<String>();
-
-    private final String BEGIN_WRAPPER = "\n//XMLVM_BEGIN_WRAPPER";
-    private final String END_WRAPPER   = "//XMLVM_END_WRAPPER";
+    private Writer   out;
+    private CLibrary lib;
+    private CObject  object;
+    private String   objectClassName = null;
 
 
     public CStructOutput(Writer out, CLibrary lib, CObject obj) {
@@ -26,44 +24,89 @@ public class CStructOutput {
         this.out = out;
         this.lib = lib;
         this.object = obj;
+        this.objectClassName = object.getcClassName();
     }
 
     public void appendNewObjectCreation() throws IOException {
 
-        out.append(BEGIN_WRAPPER + "[__NEW_" + object.getcClassName() + "]\n");
-
+        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__NEW_" + objectClassName + "]\n");
         for (CArgument var : object.getVariables()) {
 
             if (CStruct.isStruct(var.getType().toString())) {
-                out.append("\tme->fields." + object.getcClassName() + "." + var.name + "_");
+                out.append("\tme->fields." + objectClassName + "." + var.name + "_");
                 out.append(" = __NEW_" + lib.getPackagename().replace(".", "_") + "_"
                         + var.getType().toString() + "();\n");
             }
         }
-        out.append(END_WRAPPER + "\n");
+        out.append(CUtilsHelper.END_WRAPPER + "\n");
     }
 
+    /*
+     * Append the implementation for function calls
+     */
+    public void appendFunction() throws IOException {
+
+        for (CMethod method : object.getMethods()) {
+
+            String returnType = method.getReturnType().toString();
+
+            out.append(CUtilsHelper.getWrapperComment(method.getArguments(), objectClassName,
+                    method.name));
+
+            /*
+             * Currently only methods that do not take arguments and return type
+             * is native type or a structure are handled
+             */
+            if (method.getArguments().isEmpty()) {
+                String methodCall = object.name + method.name.substring(0, 1).toUpperCase()
+                        + method.name.substring(1) + "(to" + object.name + "(me))";
+
+                if (returnType.equals("void")) {
+                    out.append("\n" + methodCall + ";\n");
+                } else if (Advisor.isNativeType(returnType)) {
+                    out.append("\nreturn " + methodCall + ";\n");
+                } else if (CStruct.isStruct(returnType)) {
+                    out.append("\nreturn from" + returnType + "(" + methodCall + ");\n");
+                } else {
+                    out.append(CUtilsHelper.NOT_IMPLEMENTED + "\n");
+                }
+            } else {
+                out.append(CUtilsHelper.NOT_IMPLEMENTED + "\n");
+            }
+            out.append(CUtilsHelper.END_WRAPPER + "\n");
+
+        }
+    }
+
+    /*
+     * Append the constructors for the structures TODO: Need to structure the
+     * code in order to call the original 'make' for the structures.
+     */
     public void appendContructors() throws IOException {
 
         int i = 0;
         int j = 1;
+        boolean has_default_constructor = false;
+        List<CArgument> arguments = null;
 
         for (CConstructor con : object.getConstructors()) {
-            out.append(BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
 
-            for (CArgument arg : con.getArguments()) {
-                out.append("_" + arg.getType().toString());
-            }
+            arguments = con.getArguments();
 
-            out.append("]\n");
-            out.append("\t" + object.getcClassName() + "* thiz = me;\n");
+            if (arguments.isEmpty())
+                has_default_constructor = true;
 
+            out.append(CUtilsHelper.getWrapperComment(arguments, objectClassName, false, null));
+
+            out.append("\t" + objectClassName + "* thiz = me;\n");
+
+            /* Check for structure with a structure */
             for (CArgument var : object.getVariables()) {
 
                 if (CStruct.isStruct(var.getType().toString())) {
                     CObject obj = lib.getObject(var.getType().toString());
                     out.append("\t" + obj.getcClassName() + "* obj" + i + " = thiz->fields."
-                            + object.getcClassName() + "." + var.name + "_;\n");
+                            + objectClassName + "." + var.name + "_;\n");
 
                     for (CArgument variable : obj.getVariables()) {
                         out.append("\tobj" + i + "->fields." + obj.getcClassName() + "."
@@ -73,33 +116,45 @@ public class CStructOutput {
                     i++;
                 } else {
 
-                    out.append("\tthiz->fields." + object.getcClassName() + "." + var.name
-                            + "_ = n" + (j++) + ";\n");
+                    out.append("\tthiz->fields." + objectClassName + "." + var.name + "_ = n"
+                            + (j++) + ";\n");
                 }
             }
-            out.append(END_WRAPPER + "\n");
+            out.append(CUtilsHelper.END_WRAPPER + "\n");
         }
+        if (!has_default_constructor)
+            appendDefaultConstructor(out, object);
     }
 
+    private void appendDefaultConstructor(Writer out, CObject object) throws IOException {
+        out.append(CUtilsHelper.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
+        out.append("]\n");
+        out.append(CUtilsHelper.END_WRAPPER + "\n");
+    }
+
+    /*
+     * For structure, we need conversion to the ObjectiveC Object
+     */
     public void appendConversionToObjCObject() throws IOException {
 
         int i = 0;
-        String decl = object.getName() + " " + "to" + object.getName() + "(void *obj)";
-        declarations.add(decl);
+        String decl = object.name + " " + "to" + object.name + "(void *obj)";
 
         out.append(decl + "\n{\n");
-        out.append("\t" + object.getcClassName() + "*").append(" cObj = obj;\n");
+        out.append("\t" + objectClassName + "*").append(" cObj = obj;\n");
         out.append("\t" + object.getName() + " toRet;\n");
 
         if (object.hasVariables()) {
 
             for (CArgument var : object.getVariables()) {
 
-                if (CStruct.isStruct(var.getType().toString())) {
+                String variableType = var.getType().toString();
 
-                    CObject obj = lib.getObject(var.getType().toString());
+                if (CStruct.isStruct(variableType)) {
+
+                    CObject obj = lib.getObject(variableType);
                     out.append("\t" + obj.getcClassName() + "* obj" + i + " = cObj->fields."
-                            + object.getcClassName() + "." + var.name + "_;\n");
+                            + objectClassName + "." + var.name + "_;\n");
 
                     for (CArgument variable : obj.getVariables()) {
                         out.append("\ttoRet." + var.name + "." + variable.name + " = ");
@@ -111,36 +166,38 @@ public class CStructOutput {
                 } else {
 
                     out.append("\ttoRet." + var.name).append(
-                            " = cObj->fields." + object.getcClassName() + "." + var.name + "_;\n");
+                            " = cObj->fields." + objectClassName + "." + var.name + "_;\n");
                 }
             }
-        }// else
-         // System.out.println(object.name + " Structure has no Variables");
+        }
+
         out.append("\treturn toRet;\n");
         out.append("}\n");
 
     }
 
+    /*
+     * For Structures we need conversion from ObjectiveC object
+     */
     public void appendConversionToJavaObject() throws IOException {
 
         int i = 0;
         String decl = "JAVA_OBJECT from" + object.getName() + "(" + object.getName() + " obj)";
-        declarations.add(decl);
 
         out.append(decl + "\n{\n");
-        out.append("\t" + object.getcClassName() + "* jObj = __NEW_" + object.getcClassName()
-                + "();\n");
-        out.append("\t" + object.getcClassName() + "___INIT___(jObj);\n");
+        out.append("\t" + objectClassName + "* jObj = __NEW_" + objectClassName + "();\n");
+        out.append("\t" + objectClassName + "___INIT___(jObj);\n");
 
         if (object.hasVariables()) {
 
             for (CArgument var : object.getVariables()) {
 
-                if (CStruct.isStruct(var.getType().toString())) {
+                String variableType = var.getType().toString();
+                if (CStruct.isStruct(variableType)) {
 
-                    CObject obj = lib.getObject(var.getType().toString());
+                    CObject obj = lib.getObject(variableType);
                     out.append("\t" + obj.getcClassName() + "* obj" + i + " = jObj->fields."
-                            + object.getcClassName() + "." + var.name + "_;\n");
+                            + objectClassName + "." + var.name + "_;\n");
 
                     for (CArgument variable : obj.getVariables()) {
                         out.append("\tobj" + i + "->fields." + obj.getcClassName() + "."
@@ -151,17 +208,11 @@ public class CStructOutput {
                     i++;
                 } else {
 
-                    out.append("\tjObj->fields." + object.getcClassName() + "." + var.name
-                            + "_ = obj." + var.name + ";\n");
+                    out.append("\tjObj->fields." + objectClassName + "." + var.name + "_ = obj."
+                            + var.name + ";\n");
                 }
             }
-        } // else
-          // System.out.println(object.name + " Structure has no Variables");
+        }
         out.append("\treturn jObj;\n}\n");
     }
-
-    public List<String> getDeclarations() {
-        return declarations;
-    }
-
 }
