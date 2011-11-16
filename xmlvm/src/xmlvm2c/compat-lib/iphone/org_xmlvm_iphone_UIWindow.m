@@ -15,6 +15,10 @@ __TIB_DEFINITION_org_xmlvm_iphone_UIWindow __TIB_org_xmlvm_iphone_UIWindow = {
     -1, // initializerThreadId
     __INIT_org_xmlvm_iphone_UIWindow, // classInitializer
     "org.xmlvm.iphone.UIWindow", // className
+    "org.xmlvm.iphone", // package
+    JAVA_NULL, // enclosingClassName
+    JAVA_NULL, // enclosingMethodName
+    JAVA_NULL, // signature
     (__TIB_DEFINITION_TEMPLATE*) &__TIB_org_xmlvm_iphone_UIView, // extends
     sizeof(org_xmlvm_iphone_UIWindow), // sizeInstance
     XMLVM_TYPE_CLASS};

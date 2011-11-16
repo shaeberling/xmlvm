@@ -29,6 +29,10 @@ import org.xmlvm.iphone.internal.Simulator;
 @XMLVMSkeletonOnly
 public class UIScreen extends NSObject {
 
+    public final static String    UIScreenDidConnectNotification    = "UIScreenDidConnectNotification";
+    public final static String    UIScreenDidDisconnectNotification = "UIScreenDidDisconnectNotification";
+    public final static String    UIScreenModeDidChangeNotification = "UIScreenModeDidChangeNotification";
+    
     private final static UIScreen mainScreen;
     private final static CGRect   bounds;
     private final float           scale;
