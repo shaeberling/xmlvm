@@ -13,6 +13,10 @@
 #define XMLVM_FORWARD_DECL_java_lang_String
 XMLVM_FORWARD_DECL(java_lang_String)
 #endif
+#ifndef XMLVM_FORWARD_DECL_java_util_List
+#define XMLVM_FORWARD_DECL_java_util_List
+XMLVM_FORWARD_DECL(java_util_List)
+#endif
 #ifndef XMLVM_FORWARD_DECL_org_xmlvm_iphone_CGRect
 #define XMLVM_FORWARD_DECL_org_xmlvm_iphone_CGRect
 XMLVM_FORWARD_DECL(org_xmlvm_iphone_CGRect)
@@ -60,6 +64,7 @@ void org_xmlvm_iphone_UIScreen_PUT_UIScreenDidDisconnectNotification(JAVA_OBJECT
 JAVA_OBJECT org_xmlvm_iphone_UIScreen_GET_UIScreenModeDidChangeNotification();
 void org_xmlvm_iphone_UIScreen_PUT_UIScreenModeDidChangeNotification(JAVA_OBJECT v);
 JAVA_OBJECT org_xmlvm_iphone_UIScreen_mainScreen__();
+JAVA_OBJECT org_xmlvm_iphone_UIScreen_screens__();
 JAVA_OBJECT org_xmlvm_iphone_UIScreen_getBounds__(JAVA_OBJECT me);
 JAVA_OBJECT org_xmlvm_iphone_UIScreen_getApplicationFrame__(JAVA_OBJECT me);
 JAVA_FLOAT org_xmlvm_iphone_UIScreen_getScale__(JAVA_OBJECT me);

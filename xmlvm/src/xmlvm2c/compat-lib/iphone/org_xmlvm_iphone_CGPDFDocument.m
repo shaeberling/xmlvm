@@ -603,7 +603,7 @@ JAVA_OBJECT org_xmlvm_iphone_CGPDFDocument_getPage___int(JAVA_OBJECT me, JAVA_IN
     XMLVM_VAR_CFTHIZ;
     CGPDFPageRef page = CGPDFDocumentGetPage(thiz, n1);
     JAVA_OBJECT obj = __NEW_org_xmlvm_iphone_CGPDFPage();
-    org_xmlvm_iphone_CGPDFPage_INTERNAL_CONSTRUCTOR(obj, page);
+    org_xmlvm_iphone_CGPDFPage_INTERNAL_CONSTRUCTOR(obj, CFRetain(page));
     return obj;
     //XMLVM_END_WRAPPER
 }

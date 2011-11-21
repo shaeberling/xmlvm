@@ -21,6 +21,7 @@
 package org.xmlvm.iphone;
 
 import java.awt.Rectangle;
+import java.util.List;
 
 import org.xmlvm.XMLVMSkeletonOnly;
 import org.xmlvm.iphone.internal.Device;
@@ -32,7 +33,7 @@ public class UIScreen extends NSObject {
     public final static String    UIScreenDidConnectNotification    = "UIScreenDidConnectNotification";
     public final static String    UIScreenDidDisconnectNotification = "UIScreenDidDisconnectNotification";
     public final static String    UIScreenModeDidChangeNotification = "UIScreenModeDidChangeNotification";
-    
+
     private final static UIScreen mainScreen;
     private final static CGRect   bounds;
     private final float           scale;
@@ -51,6 +52,10 @@ public class UIScreen extends NSObject {
 
     public static UIScreen mainScreen() {
         return mainScreen;
+    }
+
+    public static List<UIScreen> screens() {
+        throw new RuntimeException("Not implemented");
     }
 
     public CGRect getBounds() {
