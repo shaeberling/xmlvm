@@ -1,8 +1,30 @@
+/* Copyright (c) 2002-2011 by XMLVM.org
+ *
+ * Project Info:  http://www.xmlvm.org
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
+ * License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+ * USA.
+ */
+
 package org.crossmobile.source.out;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collection;
+
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CStruct;
@@ -32,8 +54,16 @@ public class COut implements Generator {
         File out = new File(outdir);
         FileUtils.delete(out);
 
-        for (CObject o : lib.getObjects()) {
+        CObject o = null;
+        int i = 0;
+
+        Collection<CObject> col = (Collection<CObject>) lib.getObjects();
+        Object[] objs = col.toArray();
+        
+        for (i = 0; i < objs.length; i++) {
+            o = (CObject) objs[i];
             final CObject fo = o;
+
             if (!Advisor.isInIgnoreList(fo.name)) {
 
                 FileUtils.putFile(new File(out, o.getcClassName() + ".m"),
@@ -101,6 +131,9 @@ public class COut implements Generator {
             out.append("\n" + object.getName() + " to" + object.getName() + "(void * obj);\n");
             out.append("JAVA_OBJECT from" + object.getName() + "(" + object.getName() + " obj);\n");
             out.append("#define __ADDITIONAL_INSTANCE_FIELDS_" + object.getcClassName() + "\n");
+            if (Advisor.isAccumulatorNeeded(object.name))
+                out.append(" JAVA_OBJECT acc_Array;");
+            out.append("\n");
             out.append(END_DECL);
         }
 
@@ -114,6 +147,8 @@ public class COut implements Generator {
             out.append("#define __ADDITIONAL_INSTANCE_FIELDS_" + object.getcClassName());
             if (object.name.contains("NSObject"))
                 out.append(" void *wrappedObjCObj;");
+            if (Advisor.isAccumulatorNeeded(object.name))
+                out.append(" JAVA_OBJECT acc_Array;");
             out.append("\n");
             out.append(END_DECL);
         }

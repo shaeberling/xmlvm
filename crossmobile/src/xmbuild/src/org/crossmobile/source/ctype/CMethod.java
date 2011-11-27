@@ -25,8 +25,8 @@ public class CMethod extends CSelector {
     private String canonicalName;
     private boolean isProperty = false;
 
-    public CMethod(String name, boolean isAbstract, List<CArgument> arguments, List<String> nameparts, boolean isStatic, CType returnType) {
-        super(name, isAbstract, arguments, nameparts);
+    public CMethod(String name, boolean isAbstract, boolean derivesFromObjC, List<CArgument> arguments, List<String> nameparts, boolean isStatic, CType returnType) {
+        super(name, isAbstract, derivesFromObjC, arguments, nameparts);
         this.isStatic = isStatic;
         this.returnType = returnType;
         this.canonicalName = name;

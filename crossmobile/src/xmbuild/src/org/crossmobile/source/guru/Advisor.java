@@ -48,6 +48,8 @@ public class Advisor extends DefaultHandler {
     private static final Set<String> delegatePatterns = new HashSet<String>();
     private static final Set<String> definedObjects = new HashSet<String>();
     private static final List<String> ignoreList = new ArrayList<String>();
+    private static final Map<String, String> internalClassMap = new HashMap<String, String>(); 
+    private static final HashMap<String, HashMap<String, List<String>>> accMethods = new HashMap<String, HashMap<String, List<String>>>();
     //
     private String argsig;
     private List<String> argids;
@@ -56,6 +58,10 @@ public class Advisor extends DefaultHandler {
     private List<String> conids;
     private boolean conreset;
     private Map<String, String> conMaps;
+    private String className;
+    private HashMap<String, List<String>> methodMap;
+    private List<String> argList;
+    private String methodName;
     //
     private static String lastfile;
 
@@ -126,6 +132,17 @@ public class Advisor extends DefaultHandler {
             definedObjects.add(at.getValue("name"));
         else if (qName.equals("ignore"))
             ignoreList.add(at.getValue("name"));
+        else if(qName.equals("map"))
+            internalClassMap.put(at.getValue("to"), at.getValue("class"));
+        else if(qName.equals("accumulatorclass")){
+           className = at.getValue("name");
+           methodMap = new HashMap<String, List<String>>();
+        } else if (qName.equals("accmethod")){
+            argList = new ArrayList<String>();
+            methodName = at.getValue("name");
+        } else if(qName.equals("argument")){
+            argList.add(at.getValue("name"));
+        }
     }
 
     @Override
@@ -142,6 +159,14 @@ public class Advisor extends DefaultHandler {
             conname = null;
             conids = null;
         }
+        else if(qName.equals("accmethod")){
+            methodMap.put(methodName, argList);
+            argList = null;
+        }
+        else if(qName.equals("accumulatorclass")){
+            accMethods.put(className, methodMap);
+            methodMap = null;
+        }
     }
 
     public static void addDefinedObjects(CLibrary lib) {
@@ -151,6 +176,18 @@ public class Advisor extends DefaultHandler {
 
     public static CEnum constructorOverload(String signature) {
         return constructorOverload.get(signature);
+    }
+    
+    public static boolean isAccumulatorNeeded(String className){
+        return accMethods.containsKey(className);
+    }
+    
+    public static List<String> getAccumulativeArgs(String className, String methodName) {
+        HashMap<String, List<String>> methods;
+        if((methods = accMethods.get(className))!=null)
+             if(methods.containsKey(methodName))
+                 return methods.get(methodName);
+        return null;
     }
 
     public static List<String> argumentID(String signature) {
@@ -188,6 +225,13 @@ public class Advisor extends DefaultHandler {
         return methodCanonicals.get(signature);
     }
 
+    public static String getInternalClassMap(String className) {
+        if(internalClassMap.containsKey(className))
+            return internalClassMap.get(className);
+        else
+            return null;
+    }
+    
     public static Set<String> getDelegatePatterns() {
         return delegatePatterns;
     }

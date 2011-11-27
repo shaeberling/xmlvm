@@ -31,23 +31,22 @@ import org.crossmobile.source.utils.FieldHolder;
 
 public class CObject extends CAny implements FieldHolder {
 
-    private final CLibrary     library;
-    private CType              superclass          = null;
-    private Set<CType>         interfaces          = new HashSet<CType>();
-    private final boolean      isProtocol;
-    private boolean            hasOptionalMethod   = false;
-    private List<CConstructor> constructors        = new ArrayList<CConstructor>();
-    private List<CMethod>      methods             = new ArrayList<CMethod>();
-    private List<CProperty>    properties          = new ArrayList<CProperty>();
-    private final int          genericsCount;
-    private boolean            hasConstructorEnums = false;
-    private boolean            hasStaticMethods    = false;
-    private boolean            hasInstanceMethods  = false;
-    private boolean            hasProperties       = false;
-    private List<CArgument>    variables           = new ArrayList<CArgument>();
-    private boolean            isStruct            = false;
-    private String             cClassName          = null;
-
+    private final CLibrary library;
+    private CType superclass = null;
+    private Set<CType> interfaces = new HashSet<CType>();
+    private final boolean isProtocol;
+    private boolean hasOptionalMethod = false;
+    private List<CConstructor> constructors = new ArrayList<CConstructor>();
+    private List<CMethod> methods = new ArrayList<CMethod>();
+    private List<CProperty> properties = new ArrayList<CProperty>();
+    private final int genericsCount;
+    private boolean hasConstructorEnums = false;
+    private boolean hasStaticMethods = false;
+    private boolean hasInstanceMethods = false;
+    private boolean hasProperties = false;
+    private List<CArgument> variables = new ArrayList<CArgument>();
+    private boolean isStruct = false;
+    private String cClassName = null;
 
     CObject(CLibrary library, String name, boolean isProtocol) {
         super(name);
@@ -98,8 +97,7 @@ public class CObject extends CAny implements FieldHolder {
 
         names = new ArrayList<String>();
         names.add(pro.getGetterName());
-        m = new CMethod(pro.getGetterName(), pro.isAbstract(), new ArrayList<CArgument>(), names,
-                false, pro.getType());
+        m = new CMethod(pro.getGetterName(), pro.isAbstract(), true, new ArrayList<CArgument>(), names, false, pro.getType());
         for (String def : pro.getDefinitions())
             m.addDefinition(def);
         m.setProperty();
@@ -111,8 +109,7 @@ public class CObject extends CAny implements FieldHolder {
             names = new ArrayList<String>();
             names.add(pro.getSetterName());
 
-            m = new CMethod(pro.getSetterName(), pro.isAbstract(), setargs, names, false,
-                    new CType("void"));
+            m = new CMethod(pro.getSetterName(), pro.isAbstract(), true, setargs, names, false, new CType("void"));
             m.setProperty();
             for (String def : pro.getDefinitions())
                 m.addDefinition(def);
@@ -131,9 +128,9 @@ public class CObject extends CAny implements FieldHolder {
     }
 
     public String getcClassName() {
-        return cClassName;
+    	return cClassName;
     }
-
+    
     public CLibrary getLibrary() {
         return library;
     }
@@ -169,35 +166,30 @@ public class CObject extends CAny implements FieldHolder {
             for (int j = i + 1; j < constructors.size(); j++) {
                 running = constructors.get(j);
                 if (!doubles.contains(running) && running.getSignature(name).equals(basesig)) {
-                    base.updateEnum(basesig); // The enumaration definition
-                                              // happens HERE, because we want
-                                              // to finish with typedefs first
-                                              // and be sure that an override
-                                              // REALLY exists
+                    base.updateEnum(basesig);  // The enumaration definition happens HERE, because we want to finish with typedefs first and be sure that an override REALLY exists
                     if (base.isOverloaded()) {
-                        if (base.getEnum() != null) // Might be overloaded but
-                                                    // we don't support this in
-                                                    // Java
+                        if (base.getEnum() != null) // Might be overloaded but we don't support this in Java
                             hasConstructorEnums = true;
                         for (String def : running.getDefinitions())
                             base.addDefinition(def);
                         doubles.add(running);
                     } else
-                        Reporter.UNKNOWN_OVERRIDE.report("constructor " + basesig, base
-                                .getDefinitions().iterator().next()
-                                + " ## " + running.getDefinitions().iterator().next());
+                        Reporter.UNKNOWN_OVERRIDE.report("constructor " + basesig,
+                                base.getDefinitions().iterator().next()
+                                + " ## "
+                                + running.getDefinitions().iterator().next());
                 }
             }
         }
         for (CConstructor obs : doubles)
             constructors.remove(obs);
 
+
         /*
          * Fix Methods
          */
 
-        // Search if this is a delegate, so that the selector name aggregator
-        // will be more aggressive
+        // Search if this is a delegate, so that the selector name aggregator will be more aggressive
         boolean isDelegate = false;
         for (String pattern : Advisor.getDelegatePatterns())
             isDelegate |= name.matches(pattern);
@@ -207,27 +199,14 @@ public class CObject extends CAny implements FieldHolder {
 
         // Put methods in order
         for (CMethod m : methods) {
-            String givenName = Advisor.getMethodCanonical((m.isStatic() ? "+" : "-")
-                    + m.getSignature(name));
+            String givenName = Advisor.getMethodCanonical((m.isStatic() ? "+" : "-") + m.getSignature(name));
             if (givenName != null)
                 if (givenName.equals(""))
                     toRemove.add(m);
                 else
                     m.setCanonicalName(givenName);
             else {
-                String key = isDelegate ? m.nameParts.get(0) : m.getSignature(""); // if
-                                                                                   // it
-                                                                                   // is
-                                                                                   // a
-                                                                                   // delegate,
-                                                                                   // group
-                                                                                   // by
-                                                                                   // first
-                                                                                   // type,
-                                                                                   // to
-                                                                                   // minimize
-                                                                                   // namespace
-                                                                                   // pollution
+                String key = isDelegate ? m.nameParts.get(0) : m.getSignature("");  // if it is a delegate, group by first type, to minimize namespace pollution
                 List<CMethod> list = maps.get(key);
                 if (list == null) {
                     list = new ArrayList<CMethod>();
@@ -238,22 +217,17 @@ public class CObject extends CAny implements FieldHolder {
         }
 
         // find conflicting methods
-        for (List<CMethod> conflict : maps.values())
-            // get a list of all methods in categorized format
-            if (conflict.size() > 1) { // only affect methods with conflict
+        for (List<CMethod> conflict : maps.values())    // get a list of all methods in categorized format
+            if (conflict.size() > 1) {  // only affect methods with conflict
 
-                List<List<String>> parts = new ArrayList<List<String>>(); // aggregate
-                                                                          // parameter
-                                                                          // names
+                List<List<String>> parts = new ArrayList<List<String>>();   // aggregate parameter names
                 List<Boolean> statics = new ArrayList<Boolean>();
                 for (CMethod meth : conflict) {
                     parts.add(meth.nameParts);
                     statics.add(meth.isStatic());
                 }
 
-                List<String> newnames = Oracle.findUniqueNames(parts, statics, isDelegate); // find
-                                                                                            // new
-                                                                                            // names
+                List<String> newnames = Oracle.findUniqueNames(parts, statics, isDelegate); // find new names
                 String cname;
                 for (int i = 0; i < conflict.size(); i++) {
                     cname = newnames.get(i);

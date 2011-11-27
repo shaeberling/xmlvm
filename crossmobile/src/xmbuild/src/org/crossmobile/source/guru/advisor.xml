@@ -380,5 +380,26 @@
     	<ignore name = "MIDIDriverInterface"/>
     	<ignore name = "CVPlanarPixelBufferInfo"/>
     </ignorelist>
+    
+     <!-- Mapping for internal classes -->
+    <internalclassmap>
+    	<map class = "UILayoutContainerView" to="UIView"/>
+    	<map class = "UITableViewLabel" to="UILabel"/>
+       	<map class = "UICFFont" to="UIFont"/>
+    	<map class = "UITouchesEvent" to="UIEvent"/>
+    	<map class = "UIDeviceRGBColor" to="UIColor"/>
+    	<map class = "UIRoundedRectButton" to="UIButton"/>
+    	<map class = "__NSCFDictionary" to="NSDictionary"/>
+    </internalclassmap>
+    
+    <!-- Some variables have to be retained by maintaining an array of Objects -->
+  	<accumulators>
+    	<accumulatorclass name="NSMutableDictionary">
+    		<accmethod name="setObject">
+    		 	<argument name="anObject"/>
+    	 		<argument name="aKey"/>
+    	 	</accmethod>	
+    	</accumulatorclass>   
+    </accumulators>
 </advisor>
 

@@ -25,8 +25,8 @@ public class CConstructor extends CSelector {
     private CEnum overloadenum;
     private boolean isOverloaded = false;
 
-    public CConstructor(List<CArgument> arguments, List<String> nameparts) {
-        super("", false, arguments, nameparts);
+    public CConstructor(boolean derivesFromObjC, List<CArgument> arguments, List<String> nameparts) {
+        super("", false, derivesFromObjC, arguments, nameparts);
     }
 
     public boolean isOverloaded() {

@@ -90,7 +90,7 @@ public class Oracle {
                     fname = Character.toLowerCase(fname.charAt(0)) + fname.substring(1);
                     CSelector s;
                     if (lfname.equals("make") || fname.equals("create") || fname.equals("new"))
-                        s = new CConstructor(f.getParameters(), canonical(fname));
+                        s = new CConstructor(false, f.getParameters(), canonical(fname));
                     else {
                         List<CArgument> args = f.getParameters();
                         boolean isStatic = true;
@@ -98,7 +98,7 @@ public class Oracle {
                             isStatic = false;
                             args.remove(0);
                         }
-                        s = new CMethod(fname, false, args, canonical(fname), isStatic, f.getResult());
+                        s = new CMethod(fname, false, false, args, canonical(fname), isStatic, f.getResult());
                     }
                     s.addDefinition(f.definition);
                     o.addSelector(s);
@@ -110,7 +110,7 @@ public class Oracle {
                 missing.add(f);
         }
         for (CFunction f : missing) {
-            CSelector s = new CMethod(f.name, false, f.getParameters(), canonical(f.name), true, f.getResult());
+            CSelector s = new CMethod(f.name, false, false, f.getParameters(), canonical(f.name), true, f.getResult());
             s.addDefinition(f.definition);
             lib.getObject(f.framework).addSelector(s);
         }

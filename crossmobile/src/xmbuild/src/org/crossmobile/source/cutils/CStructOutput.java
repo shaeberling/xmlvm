@@ -1,3 +1,23 @@
+/* Copyright (c) 2002-2011 by XMLVM.org
+ *
+ * Project Info:  http://www.xmlvm.org
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
+ * License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+ * USA.
+ */
+
 package org.crossmobile.source.cutils;
 
 import java.io.IOException;
@@ -13,10 +33,13 @@ import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
 
 public class CStructOutput {
-    private Writer   out;
-    private CLibrary lib;
-    private CObject  object;
-    private String   objectClassName = null;
+    private Writer        out             = null;
+    private CLibrary      lib             = null;
+    private CObject       object          = null;
+    private String        objectClassName = null;
+    private CMethodHelper methodHelper    = null;
+    static int            n               = 0;
+    static int            m               = 0;
 
 
     public CStructOutput(Writer out, CLibrary lib, CObject obj) {
@@ -25,10 +48,10 @@ public class CStructOutput {
         this.lib = lib;
         this.object = obj;
         this.objectClassName = object.getcClassName();
+        this.methodHelper = new CMethodHelper(this.object.name, this.objectClassName, this.lib);
     }
 
     public void appendNewObjectCreation() throws IOException {
-
         out.append(CUtilsHelper.BEGIN_WRAPPER + "[__NEW_" + objectClassName + "]\n");
         for (CArgument var : object.getVariables()) {
 
@@ -49,29 +72,29 @@ public class CStructOutput {
         for (CMethod method : object.getMethods()) {
 
             String returnType = method.getReturnType().toString();
+            String returnString = "";
+            String methodString = null;
+            String argList = null;
+            Boolean notImplemented = false;
 
             out.append(CUtilsHelper.getWrapperComment(method.getArguments(), objectClassName,
                     method.name));
+            if (!returnType.equals("void")) {
+                returnString = methodHelper.getReturnString(returnType);
+                if (returnString == null)
+                    notImplemented = true;
+            }
+            methodString = methodHelper.getMethodString(method.name);
 
-            /*
-             * Currently only methods that do not take arguments and return type
-             * is native type or a structure are handled
-             */
-            if (method.getArguments().isEmpty()) {
-                String methodCall = object.name + method.name.substring(0, 1).toUpperCase()
-                        + method.name.substring(1) + "(to" + object.name + "(me))";
+            List<CArgument> arguments = method.getArguments();
+            argList = methodHelper.getArgList(arguments, method.isStatic());
+            if (argList == null)
+                notImplemented = true;
 
-                if (returnType.equals("void")) {
-                    out.append("\n" + methodCall + ";\n");
-                } else if (Advisor.isNativeType(returnType)) {
-                    out.append("\nreturn " + methodCall + ";\n");
-                } else if (CStruct.isStruct(returnType)) {
-                    out.append("\nreturn from" + returnType + "(" + methodCall + ");\n");
-                } else {
-                    out.append(CUtilsHelper.NOT_IMPLEMENTED + "\n");
-                }
-            } else {
+            if (notImplemented)
                 out.append(CUtilsHelper.NOT_IMPLEMENTED + "\n");
+            else {
+                out.append(returnString + "(" + methodString + argList + ");\n");
             }
             out.append(CUtilsHelper.END_WRAPPER + "\n");
 
@@ -84,46 +107,47 @@ public class CStructOutput {
      */
     public void appendContructors() throws IOException {
 
-        int i = 0;
-        int j = 1;
-        boolean has_default_constructor = false;
+        int i = 1;
         List<CArgument> arguments = null;
 
         for (CConstructor con : object.getConstructors()) {
 
             arguments = con.getArguments();
 
-            if (arguments.isEmpty())
-                has_default_constructor = true;
-
             out.append(CUtilsHelper.getWrapperComment(arguments, objectClassName, false, null));
 
-            out.append("\t" + objectClassName + "* thiz = me;\n");
+            out.append("\n" + object.name + " objCObj = " + object.name + "Make(");
+            boolean isFirst = true;
+            for (CArgument arg : con.getArguments()) {
+                if (!isFirst)
+                    out.append(",");
+                isFirst = false;
 
-            /* Check for structure with a structure */
-            for (CArgument var : object.getVariables()) {
+                if (Advisor.isNativeType(arg.getType().toString())) {
+                    out.append("n" + (i++));
+                } else if (CStruct.isStruct(arg.getType().toString()))
+                    out.append("to" + arg.getType().toString() + "(n" + (i++) + ")");
+                else
+                    out.append(objectClassName + "* n" + (i++)
+                            + ")->fields.org_xmlvm_ios_NSObject.wrappedObjCObj");
+            }
+            out.append(");\n");
 
-                if (CStruct.isStruct(var.getType().toString())) {
-                    CObject obj = lib.getObject(var.getType().toString());
-                    out.append("\t" + obj.getcClassName() + "* obj" + i + " = thiz->fields."
-                            + objectClassName + "." + var.name + "_;\n");
+            out.append(objectClassName + "* jObj = me;\n");
 
-                    for (CArgument variable : obj.getVariables()) {
-                        out.append("\tobj" + i + "->fields." + obj.getcClassName() + "."
-                                + variable.name + "_ = n" + (j++) + ";\n");
-                    }
+            for (CArgument arg : object.getVariables()) {
+                out.append("jObj->fields." + objectClassName + "." + arg.name + "_ = ");
+                if (Advisor.isNativeType(arg.getType().toString())) {
+                    out.append("objCObj." + arg.name + ";\n");
+                } else if (CStruct.isStruct(arg.getType().toString()))
+                    out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");\n");
+                else
+                    out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");\n");
 
-                    i++;
-                } else {
-
-                    out.append("\tthiz->fields." + objectClassName + "." + var.name + "_ = n"
-                            + (j++) + ";\n");
-                }
             }
             out.append(CUtilsHelper.END_WRAPPER + "\n");
         }
-        if (!has_default_constructor)
-            appendDefaultConstructor(out, object);
+        appendDefaultConstructor(out, object);
     }
 
     private void appendDefaultConstructor(Writer out, CObject object) throws IOException {
