@@ -37,15 +37,16 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CProperty;
+import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
 
 public class CObjectOutput {
-    private Writer              out             = null;
-    private CLibrary            lib             = null;
-    private CObject             object          = null;
-    private String              objectClassName = null;
-    private CMethodHelper       methodHelper    = null;
-    private Set<CFunction>     func            = null;
+    private Writer         out             = null;
+    private CLibrary       lib             = null;
+    private CObject        object          = null;
+    private String         objectClassName = null;
+    private CMethodHelper  methodHelper    = null;
+    private Set<CFunction> func            = null;
 
 
     public CObjectOutput(Writer out, CLibrary lib, CObject obj) {
@@ -68,22 +69,23 @@ public class CObjectOutput {
             out.append("void " + objectClassName + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
             out.append(" NSObject* wrappedObjCObj){\n\t");
             out.append("org_xmlvm_ios_NSObject_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);\n");
-            
-            if(Advisor.isAccumulatorNeeded(object.name)){
-                out.append(objectClassName + "* thiz = (" + objectClassName +"*)me;\n");
-                out.append("thiz->fields."+objectClassName+".acc_Array = XMLVMUtil_NEW_ArrayList();\n");
+
+            if (Advisor.isAccumulatorNeeded(object.name)) {
+                out.append(objectClassName + "* thiz = (" + objectClassName + "*)me;\n");
+                out.append("thiz->fields." + objectClassName
+                        + ".acc_Array = XMLVMUtil_NEW_ArrayList();\n");
             }
-        
+
             out.append("}");
             
 
             out.append("\n\nstatic JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)\n{");
             out.append("\t\tif([obj class] == [" + object.name + " class]");
-            
-            if((map =Advisor.getInternalClassMap(object.name))!=null)
-                out.append(" || ([NSStringFromClass([obj class]) isEqual:@\"" + map +"\"])");
+
+            if ((map = Advisor.getInternalClassMap(object.name)) != null)
+                out.append(" || ([NSStringFromClass([obj class]) isEqual:@\"" + map + "\"])");
             out.append(") {\n");
-            
+
             out.append("\t\t[obj retain];\n");
             out.append("\t\tJAVA_OBJECT jobj = __NEW_" + objectClassName + "();\n\t\t");
             out.append(objectClassName + "_INTERNAL_CONSTRUCTOR(jobj, obj);\n");
@@ -91,69 +93,90 @@ public class CObjectOutput {
             out.append("return JAVA_NULL;\n}\n");
         }
     }
-    
-    public String getMethodName(String methodName){
-        
-        for (CFunction f: func){
-           
-            if(f.name.toUpperCase().endsWith(methodName.toUpperCase()))
+
+    public String getMethodName(String methodName) {
+
+        for (CFunction f : func) {
+
+            if (f.name.toUpperCase().endsWith(methodName.toUpperCase()))
                 return f.name;
         }
         return null;
     }
-    
+
     public void appendFunction() throws IOException {
 
         /* Parse the methods */
         for (CMethod method : object.getMethods()) {
             Boolean notImplemented = false;
             String methodCall = null;
-            String tempStr = null;
+            String tempStr = "";
+            String mappedType = null;
 
             String returnType = method.getReturnType().toString();
-            
-            out.append(CUtilsHelper.getWrapperComment(method.getArguments(), objectClassName, method.name));
-            
+
+            out.append(CUtilsHelper.getWrapperComment(method.getArguments(), objectClassName,
+                    method.name));
+
             /*
              * Check if the method is a property, call appropriate getters
              * and setters
              */
-            if(method.isProperty()){
+            if (method.isProperty() && method.getArguments().isEmpty()) {
                 methodCall = "\nXMLVM_VAR_THIZ;\n";
-                tempStr = methodHelper.getReturnString(returnType);
-                if(tempStr==null)
-                    notImplemented=true;
+
+                if (!returnType.equals("void")) {
+                    if ((mappedType = CMethodHelper.getMappedDataType(returnType)) != null)
+                        methodCall += mappedType;
+                    else
+                        notImplemented = true;
+
+                    if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
+                            || returnType.equals("Object"))
+                        methodCall += "*";
+
+                    methodCall += " objCObj = ";
+                }
+
+                if (method.derivesFromObjC())
+                    methodCall = methodCall + "[thiz " + CProperty.getPropertyDef(method.name)
+                            + "];";
+                else
+                    notImplemented = true;
+
+                if (!returnType.equals("void"))
+                    tempStr = methodHelper.getReturnString(returnType);
+
+                if (tempStr == null)
+                    notImplemented = true;
                 else
                     methodCall = methodCall + tempStr;
-                if(!method.derivesFromObjC())
-                    methodCall = methodCall +"[thiz " +CProperty.getPropertyDef(method.name) + "];\n";
-                else
-                    notImplemented=true;
-            }
-            else {
-                if(method.derivesFromObjC())
+            } else {
+                if (method.derivesFromObjC())
                     methodCall = parseMethod(method);
                 else
-                    methodCall = parseCMethod(method.getArguments(),method.name, returnType, method.isStatic());
-                if(methodCall == null)
+                    methodCall = parseCMethod(method.getArguments(), method.name, returnType,
+                            method.isStatic());
+
+                if (methodCall == null)
                     notImplemented = true;
             }
-            
-             /*
-             * If the implementation is not provided then add throw error!
-             */
-            if(notImplemented == true)
+
+            if (notImplemented == true)
                 out.append(CUtilsHelper.NOT_IMPLEMENTED + "\n");
             else {
-                out.append( methodCall +"\n");
-            }
-            
-            out.append(CUtilsHelper.END_WRAPPER + "\n");
+                if (Advisor.requiresAutoReleasePool(method.name))
+                    out.append("\nNSAutoreleasePool* p = [[NSAutoreleasePool alloc] init];\n");
 
-       }
+                out.append(methodCall + "\n");
+            }
+           
+            out.append("\n" + CUtilsHelper.END_WRAPPER + "\n");
+        }
     }
-    
-    public String parseCMethod(List<CArgument> arguments, String methodName, String returnType, boolean isStatic){
+
+    public String parseCMethod(List<CArgument> arguments, String methodName, String returnType,
+            boolean isStatic) {
         StringBuilder methodCall = new StringBuilder();
         
         String returnString = " ";
@@ -161,123 +184,151 @@ public class CObjectOutput {
         boolean isFirst = true;
         String argType = null;
         int i = 1;
-        
-        if(!returnType.equals("void")){
-          returnString = methodHelper.getReturnString(returnType);
-          if(returnString == null)
-              return null;      
-          }
-        
-        if(isStatic){
-                methodCall.append(returnString+ "(");
-                if((tempName = getMethodName(methodName)) != null)
-                    methodCall.append(tempName + "(");
-                else
-                    methodCall.append(methodName + "(");                    
-        }
-        else {
-                return null;                          
-        }
-                       
-        ListIterator<CArgument> iterator = arguments.listIterator();
-        while (iterator.hasNext()) {
+        String mappedType = null;
 
+        if (!returnType.equals("void")) {
+            returnString = methodHelper.getReturnString(returnType);
+            if (returnString == null)
+                return null;
+        }
+
+        if (isStatic) {
+            if (!returnType.equals("void")) {
+
+                if ((mappedType = CMethodHelper.getMappedDataType(returnType)) != null)
+                    methodCall.append(mappedType);
+                else
+                    return null;
+
+                if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
+                        || returnType.equals("Object"))
+                    methodCall.append("*");
+                methodCall.append(" objCObj = ");
+            }
+
+            if ((tempName = getMethodName(methodName)) != null)
+                methodCall.append(tempName + "(");
+            else
+                methodCall.append(methodName + "(");
+
+        } else {
+            return null;
+        }
+
+        ListIterator<CArgument> iterator = arguments.listIterator();
+
+        while (iterator.hasNext()) {
             CArgument argument = (CArgument) iterator.next();
-            
             argType = argument.getType().toString();
-            
-            if(!isFirst) 
+
+            if (!isFirst)
                 methodCall.append(",");
             isFirst = false;
-    
-            if(!methodHelper.ignore(argType)) {
+
+            if (!methodHelper.ignore(argType)) {
                 methodCall.append(methodHelper.parseArgumentType(argType, i));
                 i++;
-            }
-            else{
+            } else {
                 return null;
             }
         }
-          
-        methodCall.append("));\n");
-        
+
+        methodCall.append(");\n");
+
+        if (Advisor.requiresAutoReleasePool(methodName))
+            methodCall.append("[ p release];\n");
+
+        methodCall.append(returnString + "\n");
+
         return methodCall.toString();
     }
 
-    public String parseMethod(CMethod method){
+    public String parseMethod(CMethod method) {
         List<String> nameParts = method.getNameParts();
         List<CArgument> arguments = method.getArguments();
         String methodName = method.name;
         String returnType = method.getReturnType().toString();
         boolean isStatic = method.isStatic();
         List<String> accumulativeArgs = null;
-        
-        if(Advisor.isAccumulatorNeeded(object.name)) {
+
+        if (Advisor.isAccumulatorNeeded(object.name)) {
             accumulativeArgs = Advisor.getAccumulativeArgs(object.name, method.name);
         }
         
         StringBuilder methodCall = new StringBuilder();
         StringBuilder accString = new StringBuilder();
-        String returnString = " ";
+        String returnString = "";
         String argType = null;
         int i = 1;
-        
-        if(!returnType.equals("void")){
-          returnString = methodHelper.getReturnString(returnType);
-          if(returnString == null)
-              return null;      
-          }
-        
-        if(isStatic){
-                methodCall.append(returnString+ "( [" + object.name + " ");
+        String mappedType = null;
+
+        if (!returnType.equals("void")) {
+            returnString = methodHelper.getReturnString(returnType);
+            if (returnString == null)
+                return null;
         }
-        else {
-                methodCall.append("\nXMLVM_VAR_THIZ;\n");
-                methodCall.append(returnString + "( [thiz ");
-                          
+
+        if (!isStatic)
+            methodCall.append("\nXMLVM_VAR_THIZ;\n");
+
+        if (!returnType.equals("void")) {
+            if ((mappedType = CMethodHelper.getMappedDataType(returnType)) != null)
+                methodCall.append(mappedType);
+            else
+                return null;
+
+            if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
+                    || returnType.equals("Object"))
+                methodCall.append("*");
+            methodCall.append(" objCObj = ");
         }
-        
+
+        if (isStatic)
+            methodCall.append(" [" + object.name + " ");
+        else
+            methodCall.append(" [thiz ");
+
         ListIterator<CArgument> iterator = arguments.listIterator();
-        
-        
-        if(arguments.isEmpty())
+
+        if (arguments.isEmpty())
             methodCall.append(methodName);
 
         
         for (String namePart : nameParts) {
+            if (iterator.hasNext()) {
+                CArgument argument = (CArgument) iterator.next();
+                methodCall.append(" " + namePart + ":");
+                argType = argument.getType().toString();
 
-                if (iterator.hasNext()) {
-
-                    CArgument argument = (CArgument) iterator.next();
-
-                    methodCall.append(" " + namePart + ":");
-                    
-                    argType = argument.getType().toString();
-                    
-                    if(accumulativeArgs!=null){
-                        if(accumulativeArgs.contains(argument.name)){
-                            accString.append("XMLVMUtil_ArrayList_add(jthiz->fields."+objectClassName +".acc_Array, ");
-                            accString.append("((org_xmlvm_ios_NSObject*) n" + i +")");
-                            accString.append("->fields.org_xmlvm_ios_NSObject.wrappedObjCObj);\n");
-                        }
+                if (accumulativeArgs != null) {
+                    if (accumulativeArgs.contains(argument.name)) {
+                        accString.append("\nXMLVMUtil_ArrayList_add(jthiz->fields." + objectClassName
+                                + ".acc_Array, ");
+                        accString.append("((org_xmlvm_ios_NSObject*) n" + i + ")");
+                        accString.append("->fields.org_xmlvm_ios_NSObject.wrappedObjCObj);");
                     }
-   
-                    if (!methodHelper.ignore(argType)) {
-                        methodCall.append(methodHelper.parseArgumentType(argType, i));
-                        i++;
-                    }
-                    else
-                        return null;
                     
                 }
+
+                if (!methodHelper.ignore(argType)) {
+                    methodCall.append(methodHelper.parseArgumentType(argType, i));
+                    i++;
+                } else
+                    return null;
+            }
         }
 
-        methodCall.append("]);\n");
-        methodCall.append(accString);
+        methodCall.append("];");
+        methodCall.append(accString + "\n");
+        if (Advisor.requiresAutoReleasePool(methodName)) {
+            System.out.println(methodName);
+            methodCall.append("[ p release];\n");
+        }
+        methodCall.append(returnString + "\n");
+
         return methodCall.toString();
     }
-    
-    
+
     public void appendConstructor() throws IOException {
 
         boolean has_default_constructor = false;
@@ -350,7 +401,7 @@ public class CObjectOutput {
                 if (iterator.hasNext()) {
 
                     CArgument argument = (CArgument) iterator.next();
-                    String parsedArg =null;
+                    String parsedArg = null;
 
                     string.append(" " + namePart + ":");
                     argType = argument.getType().toString();
@@ -367,7 +418,7 @@ public class CObjectOutput {
                         implemented = false;
                         flag = false;
                         break;
-                    }            
+                    }
                 }
             } else {
                 string.append("init]");
@@ -397,6 +448,7 @@ public class CObjectOutput {
      * Code has to be injected to register the wrapper creator
      */
     public void appendWrapperRegistration() throws IOException {
+
         out.append(CUtilsHelper.BEGIN_WRAPPER + "[__INIT_" + objectClassName + "]\n");
         if (!object.name.contains("NSObject"))
             out.append("xmlvm_register_wrapper_creator(__WRAPPER_CREATOR);\n");

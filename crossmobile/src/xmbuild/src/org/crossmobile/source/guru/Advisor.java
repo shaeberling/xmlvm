@@ -50,6 +50,8 @@ public class Advisor extends DefaultHandler {
     private static final List<String> ignoreList = new ArrayList<String>();
     private static final Map<String, String> internalClassMap = new HashMap<String, String>(); 
     private static final HashMap<String, HashMap<String, List<String>>> accMethods = new HashMap<String, HashMap<String, List<String>>>();
+    private static final List<String> autoReleaseMethod = new ArrayList<String>();
+    private static final Map<String, String> dataTypeMapping = new HashMap<String, String>();
     //
     private String argsig;
     private List<String> argids;
@@ -142,6 +144,10 @@ public class Advisor extends DefaultHandler {
             methodName = at.getValue("name");
         } else if(qName.equals("argument")){
             argList.add(at.getValue("name"));
+        } else if(qName.equals("autoreleasemethod")){
+            autoReleaseMethod.add(at.getValue("name"));
+        } else if(qName.equals("type")){
+            dataTypeMapping.put(at.getValue("name"), at.getValue("map"));        
         }
     }
 
@@ -189,7 +195,18 @@ public class Advisor extends DefaultHandler {
                  return methods.get(methodName);
         return null;
     }
+    
+    public static String getDataTypeMapping(String dataType){
+        if(dataTypeMapping.containsKey(dataType))
+            return dataTypeMapping.get(dataType);
+        else
+            return null;
+    }
 
+    public static boolean requiresAutoReleasePool(String methodName){
+        return autoReleaseMethod.contains(methodName);
+    }
+    
     public static List<String> argumentID(String signature) {
         return argumentID.get(signature);
     }

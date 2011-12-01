@@ -24,15 +24,15 @@ public class CMethodHelper {
     public String getReturnString(String retType) {
         if (!ignore(retType)) {
             if (retType.equals("Object"))
-                return "\nreturn xmlvm_get_associated_c_object";
+                return "\nreturn xmlvm_get_associated_c_object (objCObj);";
             else if (Advisor.isNativeType(retType))
-                return "\nreturn ";
+                return "\nreturn (objCObj);";
             else if (CStruct.isStruct(retType))
-                return "\nreturn from" + retType;
+                return "\nreturn from" + retType + "(objCObj);";
             else if (retType.equals("String"))
-                return "\nreturn fromNSString";
+                return "\nreturn fromNSString (objCObj);";
             else
-                return "\nreturn xmlvm_get_associated_c_object";
+                return "\nreturn xmlvm_get_associated_c_object (objCObj);";
         } else
             return null;
 
@@ -44,7 +44,7 @@ public class CMethodHelper {
         if (name.contains("Reference"))
             return true;
         else if (name.contains("[]") || name.contains("...") || Advisor.isInIgnoreList(name)
-                || lib.getObject(name).isProtocol())
+                || lib.getObject(name).isProtocol() || name.equals("Map") || name.equals("List") || name.equals("Set"))
             return true;
         else
             return false;
@@ -116,6 +116,21 @@ public class CMethodHelper {
         } else {
             return "((" + objectName + "*) (" + objectCName + "*) n" + i
                     + ")->fields.org_xmlvm_ios_NSObject.wrappedObjCObj";
+        }
+    }
+    
+    public static String getMappedDataType(String dataType){
+        String mappedType = null;
+        if((mappedType = Advisor.getDataTypeMapping(dataType))!=null){
+            if(mappedType==""){
+                return null;
+            }
+            else{
+                return "\n" + mappedType;
+            }
+        }
+        else{
+            return "\n" + dataType;
         }
     }
 }

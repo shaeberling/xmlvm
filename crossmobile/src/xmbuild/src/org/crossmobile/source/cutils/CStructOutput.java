@@ -76,6 +76,8 @@ public class CStructOutput {
             String methodString = null;
             String argList = null;
             Boolean notImplemented = false;
+            String tempString = "";
+            String mappedType = null;
 
             out.append(CUtilsHelper.getWrapperComment(method.getArguments(), objectClassName,
                     method.name));
@@ -84,6 +86,20 @@ public class CStructOutput {
                 if (returnString == null)
                     notImplemented = true;
             }
+
+            if (!returnType.equals("void")) {
+                if ((mappedType = CMethodHelper.getMappedDataType(returnType)) != null)
+                    tempString += mappedType;
+                else
+                    notImplemented = true;
+
+                if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
+                        || returnType.equals("Object")) {
+                    tempString += "*";
+                }
+                tempString += " objCObj = ";
+            }
+
             methodString = methodHelper.getMethodString(method.name);
 
             List<CArgument> arguments = method.getArguments();
@@ -94,10 +110,15 @@ public class CStructOutput {
             if (notImplemented)
                 out.append(CUtilsHelper.NOT_IMPLEMENTED + "\n");
             else {
-                out.append(returnString + "(" + methodString + argList + ");\n");
+                if (Advisor.requiresAutoReleasePool(method.name))
+                    out.append("\nNSAutoreleasePool* p = [[NSAutoreleasePool alloc] init];\n");
+                out.append(tempString + methodString + argList + ";");
+                if (Advisor.requiresAutoReleasePool(method.name))
+                    out.append("[p release];\n");
+                out.append(returnString);
             }
-            out.append(CUtilsHelper.END_WRAPPER + "\n");
-
+            
+            out.append("\n" + CUtilsHelper.END_WRAPPER + "\n");
         }
     }
 
@@ -188,7 +209,6 @@ public class CStructOutput {
 
                     i++;
                 } else {
-
                     out.append("\ttoRet." + var.name).append(
                             " = cObj->fields." + objectClassName + "." + var.name + "_;\n");
                 }

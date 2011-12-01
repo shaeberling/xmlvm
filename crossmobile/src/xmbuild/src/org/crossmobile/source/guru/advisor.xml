@@ -335,6 +335,7 @@
     	<ignore name = "FS"/>
     	<ignore name = "SEL"/> 	
     	<ignore name = "IMP"/>
+    	<ignore name = "Reference"/>
     	
     	<ignore name = "SecTrust"/>
     	<ignore name = "SecCertificate"/>
@@ -392,6 +393,10 @@
     	<map class = "__NSCFDictionary" to="NSDictionary"/>
     </internalclassmap>
     
+    <autoreleasemethods>
+    	<autoreleasemethod name="substringToIndex"/>
+    </autoreleasemethods>
+    
     <!-- Some variables have to be retained by maintaining an array of Objects -->
   	<accumulators>
     	<accumulatorclass name="NSMutableDictionary">
@@ -401,5 +406,16 @@
     	 	</accmethod>	
     	</accumulatorclass>   
     </accumulators>
+    
+    <returntypes>
+    	<type name="Object" map="NSObject"/>
+    	<type name="byte" map="Byte"/>
+    	<type name="boolean" map="BOOL"/>
+    	<type name="String" map="NSString"/>
+    	<type name="List" map=""/>
+    	<type name="Set" map=""/>
+    	<type name="Map" map=""/>
+   	</returntypes>
+    	
 </advisor>
 
