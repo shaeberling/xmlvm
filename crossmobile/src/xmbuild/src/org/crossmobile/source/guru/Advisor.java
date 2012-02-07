@@ -28,6 +28,11 @@ import javax.xml.parsers.SAXParserFactory;
 import org.crossmobile.source.ctype.CEnum;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CType;
+import org.crossmobile.source.xtype.XArg;
+import org.crossmobile.source.xtype.XInjectedMethod;
+import org.crossmobile.source.xtype.XMethod;
+import org.crossmobile.source.xtype.XProperty;
+import org.crossmobile.source.xtype.XObject;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -48,10 +53,8 @@ public class Advisor extends DefaultHandler {
     private static final Set<String> delegatePatterns = new HashSet<String>();
     private static final Set<String> definedObjects = new HashSet<String>();
     private static final List<String> ignoreList = new ArrayList<String>();
-    private static final Map<String, String> internalClassMap = new HashMap<String, String>(); 
-    private static final HashMap<String, HashMap<String, List<String>>> accMethods = new HashMap<String, HashMap<String, List<String>>>();
-    private static final List<String> autoReleaseMethod = new ArrayList<String>();
     private static final Map<String, String> dataTypeMapping = new HashMap<String, String>();
+    private static final Map<String, XObject> classObject = new HashMap<String, XObject>();
     //
     private String argsig;
     private List<String> argids;
@@ -60,10 +63,25 @@ public class Advisor extends DefaultHandler {
     private List<String> conids;
     private boolean conreset;
     private Map<String, String> conMaps;
+    
     private String className;
-    private HashMap<String, List<String>> methodMap;
-    private List<String> argList;
-    private String methodName;
+    private String selectorName;
+    private XArg xarg;
+    private XMethod xmethod;
+    private XObject xobject;
+    private ArrayList<XMethod> methodList;
+    private List<XArg> argList;
+    private String requireAutoReleasePool;
+    private ArrayList<XProperty> propertyList;
+    private ArrayList<XInjectedMethod> injectedMethodList;
+    private XProperty property;
+    private String returnType;
+    private String language;
+    private StringBuilder injectedCode;
+    private String injectedMethodName;
+    private String injectedMethodModifier;
+    private boolean currentElement = false;
+    private List<String> aliasList;
     //
     private static String lastfile;
 
@@ -134,20 +152,55 @@ public class Advisor extends DefaultHandler {
             definedObjects.add(at.getValue("name"));
         else if (qName.equals("ignore"))
             ignoreList.add(at.getValue("name"));
-        else if(qName.equals("map"))
-            internalClassMap.put(at.getValue("to"), at.getValue("class"));
-        else if(qName.equals("accumulatorclass")){
-           className = at.getValue("name");
-           methodMap = new HashMap<String, List<String>>();
-        } else if (qName.equals("accmethod")){
-            argList = new ArrayList<String>();
-            methodName = at.getValue("name");
-        } else if(qName.equals("argument")){
-            argList.add(at.getValue("name"));
-        } else if(qName.equals("autoreleasemethod")){
-            autoReleaseMethod.add(at.getValue("name"));
-        } else if(qName.equals("type")){
+        else if(qName.equals("type")){
             dataTypeMapping.put(at.getValue("name"), at.getValue("map"));        
+        } else if(qName.equals("class")){    
+            className = at.getValue("name");
+            propertyList = new ArrayList<XProperty>();
+            methodList = new ArrayList<XMethod>();
+            aliasList = new ArrayList<String>();
+        } else if(qName.equals("selector")){
+            requireAutoReleasePool = at.getValue("autoReleasePool");
+            selectorName = at.getValue("name");
+            argList = new ArrayList<XArg>(); 
+        } else if(qName.equals("arg")){
+            int flag = -1;
+            if(at.getValue("retain")!=null && at.getValue("retain").equals("true"))
+                flag = org.crossmobile.source.xtype.XObject.RETAIN;
+            else if(at.getValue("replace")!=null && at.getValue("replace").equals("true"))
+                flag = org.crossmobile.source.xtype.XObject.REPLACE;
+            else if(at.getValue("release")!=null && at.getValue("release").equals("true"))
+                flag = org.crossmobile.source.xtype.XObject.RELEASE;
+            xarg = new XArg(Integer.parseInt(at.getValue("position")), at.getValue("type"), flag);
+            argList.add(xarg);
+        } else if(qName.equals("property")){
+            int flag = -1;
+            if(at.getValue("retain")!=null && at.getValue("retain").equals("true"))
+                flag = org.crossmobile.source.xtype.XObject.RETAIN;
+            else if(at.getValue("replace")!=null && at.getValue("replace").equals("true"))
+                flag = org.crossmobile.source.xtype.XObject.REPLACE;
+            property = new XProperty(at.getValue("name"), at.getValue("type"), flag);
+            propertyList.add(property);
+        } else if(qName.equals("alias")) {   
+            aliasList.add(at.getValue("name"));
+        } else if(qName.equals("injected-method")){
+            injectedMethodList = new ArrayList<XInjectedMethod>();
+            injectedMethodName = at.getValue("name");
+            injectedMethodModifier = at.getValue("modifier");
+        } else if(qName.equals("return")) {
+            returnType = at.getValue("type");
+        } else if(qName.equals("code")){
+            injectedCode = new StringBuilder();
+            language = at.getValue("language");
+            currentElement  = true;
+        }
+    }
+
+    @Override
+    public void characters(char[] ch, int start, int length) throws SAXException {       
+        if(currentElement){
+            String cdata = new String(ch, start, length);
+            injectedCode.append(cdata);
         }
     }
 
@@ -164,15 +217,31 @@ public class Advisor extends DefaultHandler {
             consig = null;
             conname = null;
             conids = null;
-        }
-        else if(qName.equals("accmethod")){
-            methodMap.put(methodName, argList);
+        } else if(qName.equals("selector")){
+            xmethod = new XMethod(selectorName, argList, requireAutoReleasePool);
+            methodList.add(xmethod);
             argList = null;
+        } else if(qName.equals("class")){
+            xobject = new XObject(className, methodList, propertyList, aliasList, injectedMethodList);
+            classObject.put(className, xobject);
+            methodList = null;
+            propertyList = null;
+            aliasList = null;
+            injectedMethodList = null;
+        } else if(qName.equals("injected-method")){
+            XInjectedMethod injMethod = new XInjectedMethod();
+            injMethod.setReturnType(returnType);
+            injMethod.setCodelanguage(language);
+            injMethod.setCode(injectedCode.toString());
+            injMethod.setName(injectedMethodName);
+            injMethod.setModifier(injectedMethodModifier);
+            injectedCode = null;
+            injectedMethodList.add(injMethod);
+        } else if(qName.equals("code")){
+            currentElement = false;
+            
         }
-        else if(qName.equals("accumulatorclass")){
-            accMethods.put(className, methodMap);
-            methodMap = null;
-        }
+       
     }
 
     public static void addDefinedObjects(CLibrary lib) {
@@ -183,19 +252,7 @@ public class Advisor extends DefaultHandler {
     public static CEnum constructorOverload(String signature) {
         return constructorOverload.get(signature);
     }
-    
-    public static boolean isAccumulatorNeeded(String className){
-        return accMethods.containsKey(className);
-    }
-    
-    public static List<String> getAccumulativeArgs(String className, String methodName) {
-        HashMap<String, List<String>> methods;
-        if((methods = accMethods.get(className))!=null)
-             if(methods.containsKey(methodName))
-                 return methods.get(methodName);
-        return null;
-    }
-    
+  
     public static String getDataTypeMapping(String dataType){
         if(dataTypeMapping.containsKey(dataType))
             return dataTypeMapping.get(dataType);
@@ -203,10 +260,6 @@ public class Advisor extends DefaultHandler {
             return null;
     }
 
-    public static boolean requiresAutoReleasePool(String methodName){
-        return autoReleaseMethod.contains(methodName);
-    }
-    
     public static List<String> argumentID(String signature) {
         return argumentID.get(signature);
     }
@@ -241,13 +294,6 @@ public class Advisor extends DefaultHandler {
     public static String getMethodCanonical(String signature) {
         return methodCanonicals.get(signature);
     }
-
-    public static String getInternalClassMap(String className) {
-        if(internalClassMap.containsKey(className))
-            return internalClassMap.get(className);
-        else
-            return null;
-    }
     
     public static Set<String> getDelegatePatterns() {
         return delegatePatterns;
@@ -267,5 +313,9 @@ public class Advisor extends DefaultHandler {
             this.name = name;
             this.value = value;
         }
+    }
+    
+    public static Map<String, XObject> getSpecialClasses(){
+        return classObject;
     }
 }

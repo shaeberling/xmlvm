@@ -332,90 +332,118 @@
     
     <!-- The below classes are currently ignored while generating the C wrappers-->
     <ignorelist>
-    	<ignore name = "FS"/>
-    	<ignore name = "SEL"/> 	
-    	<ignore name = "IMP"/>
-    	<ignore name = "Reference"/>
-    	
-    	<ignore name = "SecTrust"/>
-    	<ignore name = "SecCertificate"/>
-    	<ignore name = "SecKey"/>
-    	<ignore name = "SecIdentity"/>
-    	
-    	<ignore name = "NSZone"/>
-    	<ignore name = "NSURLHandle"/>
-    	<ignore name = "CFData"/>
-    	<ignore name = "CFRunLoop"/>
-    	<ignore name = "CFAllocator"/>
-    	<ignore name = "CFURL"/>
-    	<ignore name = "CFArray"/>
-    	<ignore name = "CFRunLoopTimer"/>
-      	<ignore name = "CFRunLoopObserver"/>
-    	<ignore name = "CFRunLoopSource"/>
-    	<ignore name = "CFDictionary"/>
-       	<ignore name = "CGImage"/>
-    	<ignore name = "CGContext"/>
-    	<ignore name = "CGPDFArray"/>
-	   	<ignore name = "CGColor"/>
-       	<ignore name = "CGPDFObject"/>	
-    	<ignore name = "CGPattern"/>
-    	<ignore name = "CGPDFDocument"/>
-    	<ignore name = "CGFont"/>
-    	<ignore name = "CGGradient"/>
-       	<ignore name = "CGDataProvider"/>
-       	<ignore name = "CGPDFDictionary"/>
-       	<ignore name = "CGPDFPage"/>
-    	<ignore name = "CGShading"/>
-    	<ignore name = "CGFunction"/>
-    	<ignore name = "CGColorSpace"/>
-    	<ignore name = "CGLayer"/>
-    	<ignore name = "CGPath"/>
-    	<ignore name = "CMTimeMapping"/>
-    	<ignore name = "CMTimeRange"/>
-    	<ignore name = "CMTime"/>
-    	
-  		<!-- The extraction of variables for the below structures is not trivial  -->
-    	<ignore name = "NSDecimal"/> 
-    	<ignore name = "MIDIValueMap"/>
-    	<ignore name = "IUnknownVTbl"/>
-    	<ignore name = "MIDIDriverInterface"/>
-    	<ignore name = "CVPlanarPixelBufferInfo"/>
+        <ignore name = "FS"/>
+        <ignore name = "SEL"/>     
+        <ignore name = "IMP"/>
+        <ignore name = "Reference"/>
+        
+        <ignore name = "SecTrust"/>
+        <ignore name = "SecCertificate"/>
+        <ignore name = "SecKey"/>
+        <ignore name = "SecIdentity"/>
+        
+        <ignore name = "NSZone"/>
+        <ignore name = "NSURLHandle"/>
+        <ignore name = "CFData"/>
+        <ignore name = "CFRunLoop"/>
+        <ignore name = "CFAllocator"/>
+        <ignore name = "CFURL"/>
+        <ignore name = "CFArray"/>
+        <ignore name = "CFRunLoopTimer"/>
+        <ignore name = "CFRunLoopObserver"/>
+        <ignore name = "CFRunLoopSource"/>
+        <ignore name = "CFDictionary"/>
+        <ignore name = "CGImage"/>
+        <ignore name = "CGContext"/>
+        <ignore name = "CGPDFArray"/>
+        <ignore name = "CGColor"/>
+        <ignore name = "CGPDFObject"/>    
+        <ignore name = "CGPattern"/>
+        <ignore name = "CGPDFDocument"/>
+        <ignore name = "CGFont"/>
+        <ignore name = "CGGradient"/>
+        <ignore name = "CGDataProvider"/>
+        <ignore name = "CGPDFDictionary"/>
+        <ignore name = "CGPDFPage"/>
+        <ignore name = "CGShading"/>
+        <ignore name = "CGFunction"/>
+        <ignore name = "CGColorSpace"/>
+        <ignore name = "CGLayer"/>
+        <ignore name = "CGPath"/>
+        <ignore name = "CMTimeMapping"/>
+        <ignore name = "CMTimeRange"/>
+        <ignore name = "CMTime"/>
+        
+          <!-- The extraction of variables for the below structures is not trivial  -->
+        <ignore name = "NSDecimal"/> 
+        <ignore name = "MIDIValueMap"/>
+        <ignore name = "IUnknownVTbl"/>
+        <ignore name = "MIDIDriverInterface"/>
+        <ignore name = "CVPlanarPixelBufferInfo"/>
     </ignorelist>
     
-     <!-- Mapping for internal classes -->
-    <internalclassmap>
-    	<map class = "UILayoutContainerView" to="UIView"/>
-    	<map class = "UITableViewLabel" to="UILabel"/>
-       	<map class = "UICFFont" to="UIFont"/>
-    	<map class = "UITouchesEvent" to="UIEvent"/>
-    	<map class = "UIDeviceRGBColor" to="UIColor"/>
-    	<map class = "UIRoundedRectButton" to="UIButton"/>
-    	<map class = "__NSCFDictionary" to="NSDictionary"/>
-    </internalclassmap>
-    
-    <autoreleasemethods>
-    	<autoreleasemethod name="substringToIndex"/>
-    </autoreleasemethods>
-    
-    <!-- Some variables have to be retained by maintaining an array of Objects -->
-  	<accumulators>
-    	<accumulatorclass name="NSMutableDictionary">
-    		<accmethod name="setObject">
-    		 	<argument name="anObject"/>
-    	 		<argument name="aKey"/>
-    	 	</accmethod>	
-    	</accumulatorclass>   
-    </accumulators>
-    
     <returntypes>
-    	<type name="Object" map="NSObject"/>
-    	<type name="byte" map="Byte"/>
-    	<type name="boolean" map="BOOL"/>
-    	<type name="String" map="NSString"/>
-    	<type name="List" map=""/>
-    	<type name="Set" map=""/>
-    	<type name="Map" map=""/>
-   	</returntypes>
-    	
+        <type name="Object" map="NSObject"/>
+        <type name="byte" map="Byte"/>
+        <type name="boolean" map="BOOL"/>
+        <type name="String" map="NSString"/>
+        <type name="List" map=""/>
+        <type name="Set" map=""/>
+        <type name="Map" map=""/>
+    </returntypes>
+    
+     <!-- Mapping for internal classes -->
+    <class name="UIView">
+        <alias name ="UILayoutContainerView"/>
+    </class>
+    
+    <class name="UILabel">
+        <alias name ="UITableViewLabel"/>
+    </class>
+    
+    <class name="UIFont">
+        <alias name ="UICFFont"/>
+    </class>
+    
+    <class name="UIEvent">
+        <alias name ="UITouchesEvent"/>
+    </class>
+    
+    <class name="UIColor">
+        <alias name ="UIDeviceRGBColor"/>
+    </class>
+    
+    <class name="UIButton">
+        <alias name ="UIRoundedRectButton"/>
+    </class>
+    
+    <class name="NSDictionary">
+        <alias name ="__NSCFDictionary"/>
+    </class> 
+    
+    <class name="NSMutableDictionary">
+        <selector name="-setObject:forKey:">
+            <arg position="0" type="NSObject" retain="true"/>
+            <arg position="1" type="NSObject" retain="true"/>
+        </selector>
+    </class>
+    
+    <class name="NSString">
+        <selector name="-substringToIndex:" autoReleasePool="true"/>
+        
+        <injected-method name="toString" modifier="public">
+            <signature>
+                <return type="String"/>
+            </signature>
+            <code language="c">
+                <![CDATA[return fromNSString(((org_xmlvm_ios_NSObject*) me)->fields.org_xmlvm_ios_NSObject.wrappedObjCObj);]]>
+            </code>
+        </injected-method>
+    </class>
+    
+    <class name="UITabBarController">
+        <property name="viewControllers" type="List&lt;UIViewController&gt;" retain="true"/>
+        <property name="delegate" type="UITabBarControllerDelegate" delegate="true" replace="true"/>
+    </class> 
 </advisor>
 

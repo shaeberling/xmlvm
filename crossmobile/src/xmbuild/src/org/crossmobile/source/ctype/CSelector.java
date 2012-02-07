@@ -29,6 +29,7 @@ public abstract class CSelector extends CAnyMethod {
     private final List<CArgument> arguments;
     protected final List<String> nameParts;
     private final boolean derivesFromObjC;
+    private String selectorName;
 
     public static CSelector create(CObject parent, boolean isStatic, CType returnType, List<String> methodParts, List<CArgument> args) {
         
@@ -132,7 +133,8 @@ public abstract class CSelector extends CAnyMethod {
 
     public static void parse(CObject parent, Stream s) {
         String fullText = s.consumeBlock();
-
+        String selName;
+        
         boolean isStatic = fullText.charAt(0) == '+';
         String body = fullText.substring(1, fullText.length() - 1).trim();
 
@@ -148,9 +150,11 @@ public abstract class CSelector extends CAnyMethod {
 
         List<CArgument> args = new ArrayList<CArgument>();
         List<String> methodParts = new ArrayList<String>();
-        if (!body.contains(":"))
+        if (!body.contains(":")) {
             // No arguments, only method name
             methodParts.add(body);
+            selName = isStatic? ("+" + body) : ("-" + body);
+        }
         else {
             // At least one argument: parsing
             StringTokenizer tk = new StringTokenizer(body, ":");
@@ -161,12 +165,16 @@ public abstract class CSelector extends CAnyMethod {
                 methodParts.add(res.selectorPart);
             }
             methodParts.remove(methodParts.size() - 1); // Selectors end with argument definition, not argument name
+            selName = isStatic? "+" : "-";
+            for (String m : methodParts)
+                selName += m + ":";
         }
         CSelector sel = CSelector.create(parent, isStatic, returnType, methodParts, args);
         sel.addDefinition(fullText);
+        sel.setSelectorName(selName);
         parent.addSelector(sel);
     }
-    
+
     public boolean derivesFromObjC() {
         return derivesFromObjC;
     }
@@ -184,5 +192,13 @@ public abstract class CSelector extends CAnyMethod {
     
     public List<String> getNameParts(){
         return this.nameParts;
+    }
+    
+    private void setSelectorName(String selName) {
+       this.selectorName = selName;
+    }
+    
+    public String getSelectorName(){
+        return this.selectorName;
     }
 }

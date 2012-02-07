@@ -18,7 +18,7 @@
  * USA.
  */
 
-package org.crossmobile.source.cutils;
+package org.crossmobile.source.out.cutils;
 
 import java.util.List;
 
@@ -26,14 +26,20 @@ import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.ctype.CStruct;
 
-/*
- * Helper class to get the comments required  for the wrappers
+/**
+ * 
+ * Helper class to help in generating the comments required for the wrappers
+ * These comments are essential in order to identify a wrapper during the code
+ * injection process.
+ * 
  */
 public class CUtilsHelper {
 
     public static final String     BEGIN_WRAPPER   = "\n//XMLVM_BEGIN_WRAPPER";
     public static final String     END_WRAPPER     = "//XMLVM_END_WRAPPER";
     public static final String     NOT_IMPLEMENTED = "\nXMLVM_NOT_IMPLEMENTED();";
+    public static final String     BEGIN_IMPL      = "\n//XMLVM_BEGIN_IMPLEMENTATION";
+    public static final String     END_IMPL        = "//XMLVM_END_IMPLEMENTATION";
 
     private static String          objectClassName = null;
     private static List<CArgument> arguments       = null;
@@ -41,6 +47,21 @@ public class CUtilsHelper {
     private final static int       CONSTRUCTOR     = 2;
 
 
+    /**
+     * Method to construct the wrapper comments that are used for identifcation
+     * during code injection process
+     * 
+     * @param type
+     *            - indicates if it is a method or a constructor
+     * @param methodName
+     *            - If a method, the name of the method
+     * @param constructorOverloaded
+     *            - In some cases, we have overloaded constructors in which
+     *            case, we use the enums to distinguish
+     * @param enumName
+     *            - in case constructor is overloaded, the enum name
+     * @return constructed string of the comment
+     */
     private static String getWrapperComment(int type, String methodName,
             boolean constructorOverloaded, String enumName) {
         StringBuilder str = new StringBuilder();
@@ -72,6 +93,19 @@ public class CUtilsHelper {
 
     }
 
+    /**
+     * This method is used to construct the wrapper comment required for
+     * identification of a method during code injection process. If methods need
+     * a wrapper comment then this particular method is called
+     * 
+     * @param args
+     *            - list of arguments of a method
+     * @param objClassName
+     *            - class the method belongs to
+     * @param methodName
+     *            - name of the method
+     * @return constructed string of the comment
+     */
     public static String getWrapperComment(List<CArgument> args, String objClassName,
             String methodName) {
         arguments = args;
@@ -79,6 +113,21 @@ public class CUtilsHelper {
         return getWrapperComment(METHOD, methodName, false, null);
     }
 
+    /**
+     * This method is used to construct the wrapper comment required for
+     * identification of a method during code injection process. If a
+     * constructor need a wrapper comment then this particular method is called
+     * 
+     * @param args
+     *            - list of arguments for a constructor
+     * @param objClassName
+     *            - name of the class
+     * @param constructorOverloaded
+     *            - if constructor is overloaded
+     * @param enumName
+     *            - Enum name in case constructor is overloaded
+     * @return constructed string of the comment
+     */
     public static String getWrapperComment(List<CArgument> args, String objClassName,
             boolean constructorOverloaded, String enumName) {
         arguments = args;
