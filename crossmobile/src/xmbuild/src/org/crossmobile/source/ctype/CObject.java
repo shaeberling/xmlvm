@@ -16,6 +16,7 @@
 
 package org.crossmobile.source.ctype;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,7 +30,8 @@ import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.parser.Stream;
 import org.crossmobile.source.utils.FieldHolder;
 
-public class CObject extends CAny implements FieldHolder {
+public class CObject extends CAny implements FieldHolder, Serializable {
+    private static final long serialVersionUID = 1L;
 
     private final CLibrary library;
     private CType superclass = null;

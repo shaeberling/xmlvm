@@ -16,6 +16,7 @@
 
 package org.crossmobile.source.ctype;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import org.crossmobile.source.guru.Advisor;
@@ -23,7 +24,8 @@ import org.crossmobile.source.guru.Oracle;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.utils.StringUtils;
 
-public class CType {
+public class CType implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private static Map<String, String> typedefs = new HashMap<String, String>();
     public static final String FUNCPOINT = "Object";
@@ -153,7 +155,8 @@ public class CType {
         return processed.hashCode();
     }
 
-    private static class TypeID {
+    private static class TypeID implements Serializable {
+        private static final long serialVersionUID = 1L;
 
         private final static Map<String, TypeID> types = new HashMap<String, TypeID>();
         //

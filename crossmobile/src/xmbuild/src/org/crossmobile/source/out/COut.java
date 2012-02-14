@@ -53,8 +53,8 @@ public class COut implements Generator {
 
     private final String outdir;
     private CLibrary     lib;
-    private final String BEGIN_DECL = "\n//XMLVM_BEGIN_DECLARATIONS";
-    private final String END_DECL   = "//XMLVM_END_DECLARATIONS";
+    private static final String BEGIN_DECL = "\n//XMLVM_BEGIN_DECLARATIONS";
+    private static final String END_DECL   = "//XMLVM_END_DECLARATIONS";
 
 
     public COut(String outdir) {
@@ -134,7 +134,7 @@ public class COut implements Generator {
      * @param out
      * @throws IOException
      */
-    private void emitHeader(CObject object, Writer out) throws IOException {
+    private static void emitHeader(CObject object, Writer out) throws IOException {
 
         out.append(BEGIN_DECL + "\n");
 
@@ -167,7 +167,7 @@ public class COut implements Generator {
      * @param out
      * @throws IOException
      */
-    private void emitAccumulatorReplacer(String className, Writer out) throws IOException {
+    private static void emitAccumulatorReplacer(String className, Writer out) throws IOException {
 
         if (AdvisorWrapper.needsReplacer(className)) {
             XObject obj = AdvisorWrapper.getSpecialClass(className);
@@ -189,7 +189,7 @@ public class COut implements Generator {
      * @param out
      * @throws IOException
      */
-    private void emitInjectedCode(CObject object, Writer out) throws IOException {
+    private static void emitInjectedCode(CObject object, Writer out) throws IOException {
         List<XInjectedMethod> iMethods = AdvisorWrapper.getInjectedMethods(object.name);
         for (XInjectedMethod im : iMethods) {
             // TODO Consider cases where injected method has arguments

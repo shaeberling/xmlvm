@@ -16,13 +16,15 @@
 
 package org.crossmobile.source.ctype;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.parser.BlockType;
 import org.crossmobile.source.parser.Stream;
 
-public class CAny {
+public class CAny implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     public final String name;
     private List<String> definition = new ArrayList<String>(2);

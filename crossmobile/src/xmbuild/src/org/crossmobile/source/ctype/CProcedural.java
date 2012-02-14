@@ -16,10 +16,12 @@
 
 package org.crossmobile.source.ctype;
 
+import java.io.Serializable;
 import java.util.List;
 import org.crossmobile.source.guru.Oracle;
 
-public class CProcedural {
+public class CProcedural implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     public final String name;
     private final List<String> allnames;

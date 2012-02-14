@@ -17,17 +17,20 @@
 package org.crossmobile.source.ctype;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.guru.Oracle;
-import org.crossmobile.source.utils.FileUtils;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.utils.FieldHolder;
+import org.crossmobile.source.utils.FileUtils;
 
-public class CLibrary implements FieldHolder {
+public class CLibrary implements FieldHolder, Serializable {
+    private static final long serialVersionUID = 1L;
 
     private final Map<String, CObject> objects = new HashMap<String, CObject>();
     private final Set<CEnum> enums = new LinkedHashSet<CEnum>();
