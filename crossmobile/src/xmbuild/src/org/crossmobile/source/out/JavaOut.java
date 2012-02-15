@@ -31,6 +31,8 @@ import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.guru.Reporter.Tuplet;
 import org.crossmobile.source.utils.WriteCallBack;
 import org.crossmobile.source.utils.FileUtils;
+import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.XInjectedMethod;
 
 public class JavaOut implements Generator {
 
@@ -176,7 +178,21 @@ public class JavaOut implements Generator {
                 if (!m.isStatic() && !m.isProperty())
                     parseMethod(object, m, out);
         }
+        
+        if (AdvisorWrapper.classHasInjectedCode(object.name)){
+            out.append("\n\t/*\n\t * Injected methods\n\t */\n");
+            List<XInjectedMethod> iMethods = AdvisorWrapper.getInjectedMethods(object.name);
+            for (XInjectedMethod im : iMethods){
+                parseInjectedMethods(object, im, out);
+            }
+        }
         out.append("}\n");
+    }
+
+    private void parseInjectedMethods(CObject object, XInjectedMethod im, Writer out) throws IOException {
+        out.append("\t");
+        out.append(im.getModifier() +" "+im.getReturnType() +" "+ im.getName()+"()");
+        out.append(DUMMYBODY);        
     }
 
     private void parseMethod(CObject parent, CMethod m, Writer out) throws IOException {
