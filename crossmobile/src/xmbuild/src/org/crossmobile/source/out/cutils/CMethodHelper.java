@@ -28,6 +28,7 @@ import org.crossmobile.source.ctype.CFunction;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
+import org.crossmobile.source.out.COut;
 
 /**
  * This class servers as a helper class for wrapper generation of the methods.
@@ -183,8 +184,8 @@ public class CMethodHelper {
      */
     public String parseArgumentType(String argType, int i) {
         if (argType.equals("Object")) {
-            return "((org_xmlvm_ios_NSObject*) n" + i
-                    + ")->fields.org_xmlvm_ios_NSObject.wrappedObjCObj";
+            return "((" + COut.packageName + "NSObject*) n" + i + ")->fields." + COut.packageName
+                    + "NSObject.wrappedObjCObj";
         } else if (Advisor.isNativeType(argType)) {
             return "n" + i;
         } else if (CStruct.isStruct(argType)) {
@@ -192,8 +193,8 @@ public class CMethodHelper {
         } else if (argType.contains("String")) {
             return "toNSString" + "(n" + i + ")";
         } else {
-            return "((" + objectName + "*) (" + objectCName + "*) n" + i
-                    + ")->fields.org_xmlvm_ios_NSObject.wrappedObjCObj";
+            return "((" + objectName + "*) (" + objectCName + "*) n" + i + ")->fields."
+                    + COut.packageName + "NSObject.wrappedObjCObj";
         }
     }
 
@@ -217,5 +218,32 @@ public class CMethodHelper {
         } else {
             return dataType;
         }
+    }
+
+    /**
+     * Constructs the return variable with appropriate return type
+     * 
+     * @param returnType
+     *            - return type of the method
+     * @return - constructed string for the return variable
+     */
+    public static String getReturnVariable(String returnType) {
+        String mappedType = null;
+        StringBuilder returnVariable = new StringBuilder();
+
+        if (!returnType.equals("void")) {
+            if ((mappedType = getMappedDataType(returnType)) != null)
+                returnVariable.append("\n\t" + mappedType);
+            else
+                return null;
+
+            if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
+                    || returnType.equals("Object"))
+                returnVariable.append("*");
+
+            returnVariable.append(" objCObj = ");
+        } else
+            returnVariable.append("");
+        return returnVariable.toString();
     }
 }

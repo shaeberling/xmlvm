@@ -53,6 +53,7 @@ public class COut implements Generator {
 
     private final String outdir;
     private CLibrary     lib;
+    public static String packageName = null;
     private static final String BEGIN_DECL = "\n//XMLVM_BEGIN_DECLARATIONS";
     private static final String END_DECL   = "//XMLVM_END_DECLARATIONS";
 
@@ -64,6 +65,7 @@ public class COut implements Generator {
     @Override
     public void generate(final CLibrary library) {
         this.lib = library;
+        packageName = lib.getPackagename().replace(".", "_") + "_";
         File out = new File(outdir);
         FileUtils.delete(out);
 

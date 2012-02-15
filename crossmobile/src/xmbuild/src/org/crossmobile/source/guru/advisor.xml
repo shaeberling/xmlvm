@@ -370,9 +370,6 @@
         <ignore name = "CGColorSpace"/>
         <ignore name = "CGLayer"/>
         <ignore name = "CGPath"/>
-        <ignore name = "CMTimeMapping"/>
-        <ignore name = "CMTimeRange"/>
-        <ignore name = "CMTime"/>
         
           <!-- The extraction of variables for the below structures is not trivial  -->
         <ignore name = "NSDecimal"/> 

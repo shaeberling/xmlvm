@@ -35,6 +35,7 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
+import org.crossmobile.source.out.COut;
 
 /**
  * This class is used to generate code for the constructors for classes as well
@@ -46,19 +47,18 @@ import org.crossmobile.source.guru.Advisor;
  */
 public class CConstructorOut {
 
-    private Writer        out             = null;
-    private CObject       object          = null;
-    private CLibrary      lib             = null;
-    private String        objectClassName = null;
-    private CMethodHelper methodHelper    = null;
+    private Writer        out          = null;
+    private CObject       object       = null;
+    private CLibrary      lib          = null;
+    private CMethodHelper methodHelper = null;
 
 
     public CConstructorOut(Writer out, CLibrary lib, CObject object) {
         this.out = out;
         this.object = object;
         this.lib = lib;
-        this.objectClassName = object.getcClassName();
-        this.methodHelper = new CMethodHelper(this.object.name, this.objectClassName, this.lib);
+        this.methodHelper = new CMethodHelper(this.object.name, this.object.getcClassName(),
+                this.lib);
     }
 
     /**
@@ -79,7 +79,8 @@ public class CConstructorOut {
             arguments = con.getArguments();
 
             if (isStruct) {
-                out.append(CUtilsHelper.getWrapperComment(arguments, objectClassName, false, null));
+                out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), false,
+                        null));
                 emitStructConstructor(arguments);
             } else {
                 if (arguments.isEmpty())
@@ -90,7 +91,7 @@ public class CConstructorOut {
                     if (cEnum != null)
                         namePartsMap = cEnum.getNameParts();
                 }
-                out.append(CUtilsHelper.getWrapperComment(arguments, objectClassName, con
+                out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), con
                         .isOverloaded(), cEnum == null ? null : cEnum.name));
                 if (con.isOverloaded()) {
                     if (cEnum != null) {
@@ -124,9 +125,10 @@ public class CConstructorOut {
         Iterator it = namePartsMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry pairs = (Map.Entry) it.next();
-            out.append("\n\t" + "if((" + objectClassName + "_" + cEnumName + "*) n"
+            out.append("\n\t" + "if((" + object.getcClassName() + "_" + cEnumName + "*) n"
                     + (arguments.size() + 1) + " == ");
-            out.append(objectClassName + "_" + cEnumName + "_GET_" + pairs.getKey() + "())\n\t{");
+            out.append(object.getcClassName() + "_" + cEnumName + "_GET_" + pairs.getKey()
+                    + "())\n\t{");
             emitObjectConstructor((List<String>) pairs.getValue(), arguments);
             out.append("\t}\n");
         }
@@ -156,15 +158,15 @@ public class CConstructorOut {
             } else if (CStruct.isStruct(arg.getType().toString()))
                 out.append("to" + arg.getType().toString() + "(n" + (i++) + ")");
             else
-                out.append(objectClassName + "* n" + (i++)
-                        + ")->fields.org_xmlvm_ios_NSObject.wrappedObjCObj");
+                out.append(object.getcClassName() + "* n" + (i++) + ")->fields." + COut.packageName
+                        + "NSObject.wrappedObjCObj");
         }
         out.append(");\n\t");
 
-        out.append(objectClassName + "* jObj = me;\n");
+        out.append(object.getcClassName() + "* jObj = me;\n");
 
         for (CArgument arg : object.getVariables()) {
-            out.append("\tjObj->fields." + objectClassName + "." + arg.name + "_ = ");
+            out.append("\tjObj->fields." + object.getcClassName() + "." + arg.name + "_ = ");
             if (Advisor.isNativeType(arg.getType().toString())) {
                 out.append("objCObj." + arg.name + ";\n");
             } else if (CStruct.isStruct(arg.getType().toString()))
@@ -235,7 +237,7 @@ public class CConstructorOut {
         out.append(string);
 
         if (implemented) {
-            out.append("\t" + objectClassName + "_INTERNAL_CONSTRUCTOR(me, objCObj);\n");
+            out.append("\t" + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(me, objCObj);\n");
         }
     }
 
@@ -246,7 +248,7 @@ public class CConstructorOut {
      * @throws IOException
      */
     private void appendDefaultConstructor() throws IOException {
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
+        out.append(CUtilsHelper.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
         out.append("]\n");
         out.append(CUtilsHelper.END_WRAPPER + "\n");
     }

@@ -37,17 +37,15 @@ import org.crossmobile.source.ctype.CStruct;
  */
 public class CStructOut {
 
-    private Writer   out             = null;
-    private CLibrary lib             = null;
-    private CObject  object          = null;
-    private String   objectClassName = null;
+    private Writer   out    = null;
+    private CLibrary lib    = null;
+    private CObject  object = null;
 
 
     public CStructOut(Writer out, CLibrary lib, CObject object) {
         this.out = out;
         this.lib = lib;
         this.object = object;
-        this.objectClassName = object.getcClassName();
     }
 
     /**
@@ -73,11 +71,11 @@ public class CStructOut {
      * @throws IOException
      */
     private void emitNewObjectCreation() throws IOException {
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__NEW_" + objectClassName + "]\n");
+        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__NEW_" + object.getcClassName() + "]\n");
         for (CArgument var : object.getVariables()) {
 
             if (CStruct.isStruct(var.getType().toString())) {
-                out.append("\tme->fields." + objectClassName + "." + var.name + "_");
+                out.append("\tme->fields." + object.getcClassName() + "." + var.name + "_");
                 out.append(" = __NEW_" + lib.getPackagename().replace(".", "_") + "_"
                         + var.getType().toString() + "();\n");
             }
@@ -91,35 +89,21 @@ public class CStructOut {
      * @throws IOException
      */
     private void emitConversionToJavaObject() throws IOException {
-        int i = 0;
         String decl = "JAVA_OBJECT from" + object.getName() + "(" + object.getName() + " obj)";
 
         out.append(decl + "\n{\n");
-        out.append("\t" + objectClassName + "* jObj = __NEW_" + objectClassName + "();\n");
-        out.append("\t" + objectClassName + "___INIT___(jObj);\n");
+        out.append("\t" + object.getcClassName() + "* jObj = __NEW_" + object.getcClassName()
+                + "();\n");
+        out.append("\t" + object.getcClassName() + "___INIT___(jObj);\n");
 
         if (object.hasVariables()) {
-
             for (CArgument var : object.getVariables()) {
-
-                String variableType = var.getType().toString();
-                if (CStruct.isStruct(variableType)) {
-
-                    CObject obj = lib.getObject(variableType);
-                    out.append("\t" + obj.getcClassName() + "* obj" + i + " = jObj->fields."
-                            + objectClassName + "." + var.name + "_;\n");
-
-                    for (CArgument variable : obj.getVariables()) {
-                        out.append("\tobj" + i + "->fields." + obj.getcClassName() + "."
-                                + variable.name + "_ = obj." + var.name + "." + variable.name
-                                + ";\n");
-                    }
-
-                    i++;
+                if (CStruct.isStruct(var.getType().toString())) {
+                    out.append("\tjObj->fields." + object.getcClassName() + "." + var.name
+                            + "_ = from" + var.getType() + "(obj." + var.name + ");\n");
                 } else {
-
-                    out.append("\tjObj->fields." + objectClassName + "." + var.name + "_ = obj."
-                            + var.name + ";\n");
+                    out.append("\tjObj->fields." + object.getcClassName() + "." + var.name + "_ = "
+                            + "obj." + var.name + ";\n");
                 }
             }
         }
@@ -133,35 +117,21 @@ public class CStructOut {
      * @throws IOException
      */
     private void emitConversionToObjCObject() throws IOException {
-        int i = 0;
         String decl = object.name + " " + "to" + object.name + "(void *obj)";
 
         out.append(decl + "\n{\n");
-        out.append("\t" + objectClassName + "*").append(" cObj = obj;\n");
+        out.append("\t" + object.getcClassName() + "*").append(" objCObj = obj;\n");
         out.append("\t" + object.getName() + " toRet;\n");
 
         if (object.hasVariables()) {
-
             for (CArgument var : object.getVariables()) {
-
-                String variableType = var.getType().toString();
-
-                if (CStruct.isStruct(variableType)) {
-
-                    CObject obj = lib.getObject(variableType);
-                    out.append("\t" + obj.getcClassName() + "* obj" + i + " = cObj->fields."
-                            + objectClassName + "." + var.name + "_;\n");
-
-                    for (CArgument variable : obj.getVariables()) {
-                        out.append("\ttoRet." + var.name + "." + variable.name + " = ");
-                        out.append("obj" + i + "->fields." + obj.getcClassName() + "."
-                                + variable.name + "_;\n");
-                    }
-
-                    i++;
+                if (CStruct.isStruct(var.getType().toString())) {
+                    out.append("\ttoRet." + var.name + " = to" + var.getType()
+                            + "(objCObj->fields." + object.getcClassName() + "." + var.name
+                            + "_);\n");
                 } else {
-                    out.append("\ttoRet." + var.name).append(
-                            " = cObj->fields." + objectClassName + "." + var.name + "_;\n");
+                    out.append("\ttoRet." + var.name + " = " + "objCObj->fields."
+                            + object.getcClassName() + "." + var.name + "_;\n");
                 }
             }
         }

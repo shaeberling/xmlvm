@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.guru.Advisor;
+import org.crossmobile.source.out.COut;
 import org.crossmobile.source.ctype.CStruct;
 
 /**
@@ -80,7 +81,7 @@ public class CUtilsHelper {
             else if (argType.equals("String"))
                 str.append("_java_lang_String");
             else if (CStruct.isStruct(argType))
-                str.append("_org_xmlvm_ios_" + argType);
+                str.append("_" + COut.packageName + argType);
             else
                 str.append("_java_lang_Object");
         }

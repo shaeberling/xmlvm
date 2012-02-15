@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
+import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorWrapper;
 import org.crossmobile.source.xtype.XObject;
 
@@ -39,17 +40,15 @@ import org.crossmobile.source.xtype.XObject;
  */
 public class CObjectOut {
 
-    private Writer   out             = null;
-    private CObject  object          = null;
-    private String   objectClassName = null;
-    private CLibrary lib             = null;
+    private Writer   out    = null;
+    private CObject  object = null;
+    private CLibrary lib    = null;
 
 
     public CObjectOut(Writer out, CLibrary lib, CObject object) {
         this.out = out;
         this.object = object;
         this.lib = lib;
-        this.objectClassName = object.getcClassName();
     }
 
     /**
@@ -74,14 +73,14 @@ public class CObjectOut {
      * @throws IOException
      */
     private void emitWrapperRegistration() throws IOException {
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__INIT_" + objectClassName + "]\n");
+        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__INIT_" + object.getcClassName() + "]\n");
         if (!object.name.contains("NSObject"))
             out.append("xmlvm_register_wrapper_creator(__WRAPPER_CREATOR);\n");
         out.append(CUtilsHelper.END_WRAPPER + "\n");
 
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__DELETE_" + objectClassName + "]\n");
+        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__DELETE_" + object.getcClassName() + "]\n");
         if (!object.name.contains("NSObject"))
-            out.append("__DELETE_org_xmlvm_ios_NSObject(me, client_data);\n");
+            out.append("__DELETE_" + COut.packageName + "NSObject(me, client_data);\n");
         out.append(CUtilsHelper.END_WRAPPER + "\n");
 
     }
@@ -96,13 +95,15 @@ public class CObjectOut {
             XObject obj = AdvisorWrapper.getSpecialClass(object.name);
             List<String> aliasList = null;
 
-            out.append("void " + objectClassName + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
+            out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
             out.append(" NSObject* wrappedObjCObj){\n\t");
-            out.append("org_xmlvm_ios_NSObject_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);\n");
+            out.append("" + COut.packageName
+                    + "NSObject_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);\n");
 
             if (AdvisorWrapper.needsAccumulator(object.name)) {
-                out.append(objectClassName + "* thiz = (" + objectClassName + "*)me;\n");
-                out.append("thiz->fields." + objectClassName
+                out.append(object.getcClassName() + "* thiz = (" + object.getcClassName()
+                        + "*)me;\n");
+                out.append("thiz->fields." + object.getcClassName()
                         + ".acc_Array = XMLVMUtil_NEW_ArrayList();\n");
             }
 
@@ -121,8 +122,8 @@ public class CObjectOut {
             out.append(") \n\t{\n");
 
             out.append("\t\t[obj retain];\n");
-            out.append("\t\tJAVA_OBJECT jobj = __NEW_" + objectClassName + "();\n\t\t");
-            out.append(objectClassName + "_INTERNAL_CONSTRUCTOR(jobj, obj);\n");
+            out.append("\t\tJAVA_OBJECT jobj = __NEW_" + object.getcClassName() + "();\n\t\t");
+            out.append(object.getcClassName() + "_INTERNAL_CONSTRUCTOR(jobj, obj);\n");
             out.append("\t\treturn jobj;\n\t}\n\t");
             out.append("return JAVA_NULL;\n}\n");
         }
