@@ -26,6 +26,7 @@ import org.crossmobile.source.parser.Stream;
 import org.crossmobile.source.utils.ListOfArguments;
 
 public class CProperty extends CAnyMethod {
+    private static final long serialVersionUID = 1L;
 
     private final CType type;
     private final String getter;

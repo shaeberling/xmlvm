@@ -208,7 +208,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
                 else
                     m.setCanonicalName(givenName);
             else {
-                String key = isDelegate ? m.nameParts.get(0) : m.getSignature("");  // if it is a delegate, group by first type, to minimize namespace pollution
+                String key = isDelegate ? m.getNameParts().get(0) : m.getSignature("");  // if it is a delegate, group by first type, to minimize namespace pollution
                 List<CMethod> list = maps.get(key);
                 if (list == null) {
                     list = new ArrayList<CMethod>();
@@ -225,7 +225,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
                 List<List<String>> parts = new ArrayList<List<String>>();   // aggregate parameter names
                 List<Boolean> statics = new ArrayList<Boolean>();
                 for (CMethod meth : conflict) {
-                    parts.add(meth.nameParts);
+                    parts.add(meth.getNameParts());
                     statics.add(meth.isStatic());
                 }
 

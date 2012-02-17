@@ -84,7 +84,7 @@ public class JavaSkeletonCreator extends Task {
         String classfilename;
         BufferedWriter out = null;
         int count = 0;
-        for (Class clazz : new ClassList(pkgname)) {
+        for (Class<?> clazz : new ClassList(pkgname)) {
             classfilename = outdir.getPath() + File.separator + clazz.getName().replace('.', File.separatorChar) + ".java";
             modifier = clazz.getModifiers();
             if (classfilename.endsWith("_.java") || !Modifier.isPublic(modifier))
@@ -118,7 +118,7 @@ public class JavaSkeletonCreator extends Task {
 
     private String getType(Type type) {
         if (type instanceof Class) {
-            Class cl = (Class) type;
+            Class<?> cl = (Class<?>) type;
             return cl.getPackage() != null ? cl.getPackage().getName() + "." + cl.getSimpleName() : cl.getSimpleName();
         } else
             return type.toString();
@@ -172,7 +172,7 @@ public class JavaSkeletonCreator extends Task {
         return res;
     }
 
-    private void writeClass(BufferedWriter out, Class clazz, int modifier) throws IOException {
+    private void writeClass(BufferedWriter out, Class<?> clazz, int modifier) throws IOException {
         if (!Modifier.isPublic(modifier))
             return;
 
@@ -183,13 +183,13 @@ public class JavaSkeletonCreator extends Task {
         if (!Modifier.isInterface(modifier))
             writeConstructors(out, clazz, isFinal && hasFinalDeclarations);
         writeMethods(out, clazz);
-        for (Class c : clazz.getDeclaredClasses())
+        for (Class<?> c : clazz.getDeclaredClasses())
             writeClass(out, c, c.getModifiers());
         tabDepth--;
         out.write(tabs() + "}\n");
     }
 
-    private boolean writeHeader(BufferedWriter out, Class clazz, int modifier) throws IOException {
+    private boolean writeHeader(BufferedWriter out, Class<?> clazz, int modifier) throws IOException {
         Type superclass;
         Type[] interfaces;
         String simplename = clazz.getSimpleName();
@@ -220,7 +220,7 @@ public class JavaSkeletonCreator extends Task {
         return Modifier.isFinal(modifier);
     }
 
-    private void writeMethods(BufferedWriter out, Class clazz) throws IOException {
+    private void writeMethods(BufferedWriter out, Class<?> clazz) throws IOException {
         Method[] methods = clazz.getDeclaredMethods();
         Arrays.sort(methods, new Comparator<Method>() {
 
@@ -260,12 +260,12 @@ public class JavaSkeletonCreator extends Task {
         }
     }
 
-    private void writeConstructors(BufferedWriter out, Class clazz, boolean writePrivate) throws IOException {
-        Constructor[] constrlist = clazz.getDeclaredConstructors();
-        Arrays.sort(constrlist, new Comparator<Constructor>() {
+    private void writeConstructors(BufferedWriter out, Class<?> clazz, boolean writePrivate) throws IOException {
+        Constructor<?>[] constrlist = clazz.getDeclaredConstructors();
+        Arrays.sort(constrlist, new Comparator<Constructor<?>>() {
 
             @Override
-            public int compare(Constructor o1, Constructor o2) {
+            public int compare(Constructor<?> o1, Constructor<?> o2) {
                 return o1.getParameterTypes().length - o2.getParameterTypes().length;
             }
         });
@@ -273,7 +273,7 @@ public class JavaSkeletonCreator extends Task {
         String simplename = clazz.getSimpleName();
         boolean hasPublicConstructor = false;
         boolean hasEmptyContructor = false;
-        for (Constructor c : constrlist) {
+        for (Constructor<?> c : constrlist) {
             int mod = c.getModifiers();
             if (!(Modifier.isProtected(mod) || Modifier.isPublic(mod)))
                 continue;
@@ -297,7 +297,7 @@ public class JavaSkeletonCreator extends Task {
 //            System.out.println("Not empty constructor: " + cname);
     }
 
-    private boolean writeFields(BufferedWriter out, Class clazz) throws IOException {
+    private boolean writeFields(BufferedWriter out, Class<?> clazz) throws IOException {
         Field[] fields = clazz.getDeclaredFields();
         boolean hasFinal = false;
         if (fields != null && fields.length > 0) {
@@ -321,7 +321,7 @@ public class JavaSkeletonCreator extends Task {
                     Object value = f.get(null);
                     if (value != null) {
                         out.write(" = ");
-                        if (type instanceof Class && ((Class) type).isPrimitive())
+                        if (type instanceof Class && ((Class<?>) type).isPrimitive())
                             out.write(value.toString()
                                     + (type.equals(Float.TYPE) ? "f" : ""));
                         else if (type.equals(String.class))
@@ -337,7 +337,7 @@ public class JavaSkeletonCreator extends Task {
         return hasFinal;
     }
 
-    private boolean fromParent(Class clazz, Method m) {
+    private boolean fromParent(Class<?> clazz, Method m) {
         try {
             return m.getModifiers() == clazz.getSuperclass().getMethod(m.getName(), m.getParameterTypes()).getModifiers();
         } catch (Exception ex) {

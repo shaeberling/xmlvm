@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CConstructor;
@@ -122,14 +123,14 @@ public class CConstructorOut {
      */
     private void emitOverloadedConstructor(String cEnumName,
             Map<String, List<String>> namePartsMap, List<CArgument> arguments) throws IOException {
-        Iterator it = namePartsMap.entrySet().iterator();
+        Iterator<Entry<String, List<String>>> it = namePartsMap.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry pairs = (Map.Entry) it.next();
+            Entry<String, List<String>> pairs = it.next();
             out.append("\n\t" + "if((" + object.getcClassName() + "_" + cEnumName + "*) n"
                     + (arguments.size() + 1) + " == ");
             out.append(object.getcClassName() + "_" + cEnumName + "_GET_" + pairs.getKey()
                     + "())\n\t{");
-            emitObjectConstructor((List<String>) pairs.getValue(), arguments);
+            emitObjectConstructor(pairs.getValue(), arguments);
             out.append("\t}\n");
         }
     }

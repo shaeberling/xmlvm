@@ -19,6 +19,7 @@ package org.crossmobile.source.ctype;
 import java.util.List;
 
 public class CMethod extends CSelector {
+    private static final long serialVersionUID = 1L;
 
     private final CType returnType;
     private final boolean isStatic;

@@ -17,6 +17,7 @@
 package org.crossmobile.source.ctype;
 
 public abstract class CAnyMethod extends CAny {
+    private static final long serialVersionUID = 1L;
 
     private final boolean isAbstract;
 

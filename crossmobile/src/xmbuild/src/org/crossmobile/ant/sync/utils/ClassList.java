@@ -29,7 +29,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import org.apache.tools.ant.AntClassLoader;
 
-public class ClassList extends ArrayList<Class> {
+public class ClassList extends ArrayList<Class<?>> {
+    private static final long serialVersionUID = 1L;
 
     private String pkg;
     private String canonical_pkg;

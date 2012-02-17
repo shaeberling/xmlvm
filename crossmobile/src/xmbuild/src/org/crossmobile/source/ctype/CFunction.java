@@ -20,6 +20,7 @@ import java.util.List;
 import org.crossmobile.source.utils.StringUtils;
 
 public class CFunction extends CProcedural {
+    private static final long serialVersionUID = 1L;
 
     private final CType result;
     private final List<CArgument> args;

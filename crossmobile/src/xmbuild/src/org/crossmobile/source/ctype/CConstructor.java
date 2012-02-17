@@ -21,6 +21,7 @@ import java.util.List;
 import org.crossmobile.source.guru.Advisor;
 
 public class CConstructor extends CSelector {
+    private static final long serialVersionUID = 1L;
 
     private CEnum overloadenum;
     private boolean isOverloaded = false;

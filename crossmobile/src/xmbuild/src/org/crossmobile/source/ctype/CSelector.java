@@ -25,9 +25,10 @@ import org.crossmobile.source.utils.StringUtils;
 import org.crossmobile.source.parser.Stream;
 
 public abstract class CSelector extends CAnyMethod {
+    private static final long serialVersionUID = 1L;
 
     private final List<CArgument> arguments;
-    protected final List<String> nameParts;
+    private final List<String> nameParts;
     private final boolean derivesFromObjC;
     private String selectorName;
 

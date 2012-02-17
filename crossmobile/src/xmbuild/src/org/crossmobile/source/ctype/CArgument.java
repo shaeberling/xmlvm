@@ -27,6 +27,7 @@ import org.crossmobile.source.utils.ListOfArguments;
 import org.crossmobile.source.utils.StringUtils;
 
 public class CArgument extends CAny {
+    private static final long serialVersionUID = 1L;
 
     private static final Pattern varargs = Pattern.compile(",\\s*+\\.\\.\\.");
     //
@@ -93,7 +94,6 @@ public class CArgument extends CAny {
                 token = token.replaceAll("(\\[.*?\\])|\\*", "").trim();
 
                 // Remove default values
-                String origtoken = token;
                 int lastEq = token.lastIndexOf('=');
                 if (lastEq >= 0)
                     token = token.substring(0, lastEq).trim();

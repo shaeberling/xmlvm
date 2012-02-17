@@ -21,11 +21,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
 import org.crossmobile.source.utils.StringUtils;
 
 public class CEnum extends CProcedural {
+    private static final long serialVersionUID = 1L;
 
     private final List<String> values;
     private final boolean resetArgNames;
@@ -54,15 +56,15 @@ public class CEnum extends CProcedural {
         
         HashMap<String, List<String>> map = new HashMap<String, List<String>>(); 
         
-        Iterator it = mapping.entrySet().iterator();
+        Iterator<Entry<String, String>> it = mapping.entrySet().iterator();
         while (it.hasNext()) {
               List<String> nameParts = new ArrayList<String>();
-              Map.Entry pairs = (Map.Entry)it.next();
-              StringTokenizer st = new StringTokenizer((String) pairs.getValue(), ":");
+              Entry<String, String> pairs = it.next();
+              StringTokenizer st = new StringTokenizer(pairs.getValue(), ":");
               while(st.hasMoreTokens()){
                   nameParts.add(st.nextToken());
               }
-              map.put((String) pairs.getKey(), nameParts);
+              map.put(pairs.getKey(), nameParts);
           }
         return map;
     }
