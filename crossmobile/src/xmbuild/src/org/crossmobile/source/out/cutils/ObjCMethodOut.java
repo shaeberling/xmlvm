@@ -60,11 +60,14 @@ public class ObjCMethodOut extends CAnyMethodOut {
         List<CArgument> arguments = method.getArguments();
         String methodName = method.name;
         String selName = method.getSelectorName();
-        StringBuilder methodCall = new StringBuilder();
+        StringBuilder objCCall = new StringBuilder();
         String argType = null;
         int i = 1;
         String returnVariableStr = null;
         String accString = "";
+        StringBuilder beginListConversion = new StringBuilder("");
+        StringBuilder releaseList = new StringBuilder("");
+        StringBuilder methodCode = new StringBuilder();
 
         if (AdvisorWrapper.needsAccumulator(object.name)
                 || AdvisorWrapper.needsReplacer(object.name)) {
@@ -72,39 +75,45 @@ public class ObjCMethodOut extends CAnyMethodOut {
         }
 
         if (!method.isStatic())
-            methodCall.append(XMLVM_VAR_THIZ + "\n\t");
+            methodCode.append(Constants.XMLVM_VAR_THIZ + Constants.NT);
 
         if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType().toString())) != null)
-            methodCall.append(returnVariableStr);
+            objCCall.append(returnVariableStr);
         else
             return null;
 
         if (method.isStatic())
-            methodCall.append(" [" + object.name + " ");
+            objCCall.append(" [" + object.name + " ");
         else
-            methodCall.append("[thiz ");
+            objCCall.append("[thiz ");
 
         ListIterator<CArgument> iterator = arguments.listIterator();
 
         if (arguments.isEmpty())
-            methodCall.append(methodName);
+            objCCall.append(methodName);
 
         for (String namePart : nameParts) {
             if (iterator.hasNext()) {
                 CArgument argument = (CArgument) iterator.next();
-                methodCall.append(" " + namePart + ":");
+                if (argument.getType().toString().equals("List")) {
+                    beginListConversion.append(CMethodHelper.getCodeToConvertToNSArray(i));
+                    releaseList.append(CMethodHelper.getCodeToReleaseList(i));
+                }
+
+                objCCall.append(" " + namePart + ":");
                 argType = argument.getType().toString();
 
                 if (!methodHelper.ignore(argType)) {
-                    methodCall.append(methodHelper.parseArgumentType(argType, i));
+                    objCCall.append(methodHelper.parseArgumentType(argType, i));
                     i++;
                 } else
                     return null;
             }
         }
 
-        methodCall.append("];");
-        methodCall.append(accString + "\n");
-        return methodCall.toString();
+        objCCall.append("];");
+        methodCode.append(beginListConversion).append(objCCall).append(accString).append(
+                releaseList + Constants.N);
+        return methodCode.toString();
     }
 }

@@ -35,32 +35,32 @@ import java.util.Map;
  */
 public class XObject {
 
-    private String                 className          = null;
-    private boolean                retain             = false;
-    private boolean                replace            = false;
-    private List<String>           aliasList          = null;
-    private boolean                hasInjectedCode    = false;
-    private List<XInjectedMethod>  injectedMethodList = null;
-    private List<XProperty>        propertyList       = null;
+    private String                 className                 = null;
+    private boolean                retain                    = false;
+    private boolean                replace                   = false;
+    private List<String>           aliasList                 = null;
+    private boolean                hasExternallyInjectedCode = false;
+    private List<XProperty>        propertyList              = null;
+    private List<XInjectedMethod>  externallyInjectedCode    = null;
 
-    public final static int        RETAIN             = 0;
-    public final static int        RELEASE            = 1;
-    public static final int        REPLACE            = 2;
+    public final static int        RETAIN                    = 0;
+    public final static int        RELEASE                   = 1;
+    public static final int        REPLACE                   = 2;
 
-    private Map<String, XMethod>   methodMap          = null;
-    private Map<String, XProperty> propMap            = null;
+    private Map<String, XMethod>   methodMap                 = null;
+    private Map<String, XProperty> propMap                   = null;
 
 
     public XObject(String className, List<XMethod> methodList, List<XProperty> propList,
-            List<String> aliases, List<XInjectedMethod> injectedMethodList) {
+            List<String> aliases, List<XInjectedMethod> extInjectedMethodList) {
         this.className = className;
         this.aliasList = aliases;
-        this.injectedMethodList = injectedMethodList;
         this.propertyList = propList;
-        if (injectedMethodList != null)
-            hasInjectedCode = true;
         createMethodMap(methodList);
         createPropertyMap(propList);
+        this.externallyInjectedCode = extInjectedMethodList;
+        if (!extInjectedMethodList.isEmpty())
+            hasExternallyInjectedCode = true;
         setFlags(methodList, propList);
     }
 
@@ -100,6 +100,7 @@ public class XObject {
                     else if (a.isReplace())
                         replace = true;
                 }
+
             }
         }
 
@@ -133,16 +134,44 @@ public class XObject {
         return propMap;
     }
 
-    public List<XInjectedMethod> getInjectedMethods() {
-        return this.injectedMethodList;
+    /**
+     * Returns the injected code that is associated with the selector
+     * 
+     * @param selector
+     *            - name of the selector for which the injected code is requesed
+     *            for
+     * @return - Instance of XInjectedMethod which has information about
+     *         injected code specified by advisor
+     */
+    public XInjectedMethod getInjectedCodeForSelector(String selector) {
+        return methodMap.get(selector).getInjectedCode();
+    }
+
+    /**
+     * Returns the list of XInjectedMethod which contain the information about
+     * the methods that are external to ObjC.
+     * 
+     * @return returns list of methods that are external to ObjC for a
+     *         particular class
+     */
+    public List<XInjectedMethod> getExternallyInjectedMethods() {
+        return this.externallyInjectedCode;
     }
 
     public List<String> getAliasList() {
         return aliasList;
     }
 
-    public boolean hasInjectedCode() {
-        return hasInjectedCode;
+    public boolean selectorHasInjectedCode(String selName) {
+        XMethod m = methodMap.get(selName);
+        if (m != null)
+            return methodMap.get(selName).hasInjectedCode();
+        else
+            return false;
+    }
+
+    public boolean hasExternallyInjectedCode() {
+        return hasExternallyInjectedCode;
     }
 
     public XMethod getMethodInstance(String selectorName) {

@@ -20,6 +20,7 @@
 
 package org.crossmobile.source.xtype;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,11 +33,10 @@ import java.util.List;
  */
 public class XInjectedMethod {
 
-    private String name;
-    private String value;
-    private String returnType;
-    private String language;
-    private String injectedCode;
+    private String      name;
+    private String      value;
+    private String      returnType;
+    private List<XCode> code = new ArrayList<XCode>();
 
 
     public void setName(String name) {
@@ -51,14 +51,6 @@ public class XInjectedMethod {
         this.returnType = returnType;
     }
 
-    public void setCodelanguage(String language) {
-        this.language = language;
-    }
-
-    public void setCode(String injectedCode) {
-        this.injectedCode = injectedCode;
-    }
-
     public String getName() {
         return this.name;
     }
@@ -71,17 +63,18 @@ public class XInjectedMethod {
         return this.returnType;
     }
 
-    public String getCodelanguage() {
-        return this.language;
-    }
-
-    public String getCode() {
-        return this.injectedCode;
-    }
-
     public List<XArg> getArguments() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    public void addCode(String injectedCode, String language, String mode) {
+        XCode code = new XCode(injectedCode, language, mode);
+        this.code.add(code);
+    }
+
+    public List<XCode> getInjectedCode() {
+        return this.code;
     }
 
 }

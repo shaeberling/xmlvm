@@ -31,9 +31,11 @@ import java.util.List;
  */
 public class XMethod {
 
-    private String     selectorName           = null;
-    private List<XArg> argumentList;
-    private boolean    requireAutoReleasePool = false;
+    private String          selectorName           = null;
+    private List<XArg>      argumentList;
+    private boolean         requireAutoReleasePool = false;
+    private XInjectedMethod injectedCode           = null;
+    private boolean         hasInjectedCode        = false;
 
 
     public XMethod(String selectorName, List<XArg> argList, String requireAutoReleasePool) {
@@ -53,5 +55,18 @@ public class XMethod {
 
     public boolean isAutoReleasePoolRequired() {
         return requireAutoReleasePool;
+    }
+
+    public void setInjectedCode(XInjectedMethod injCode) {
+        this.injectedCode = injCode;
+        hasInjectedCode = true;
+    }
+
+    public XInjectedMethod getInjectedCode() {
+        return this.injectedCode;
+    }
+
+    public boolean hasInjectedCode() {
+        return hasInjectedCode;
     }
 }

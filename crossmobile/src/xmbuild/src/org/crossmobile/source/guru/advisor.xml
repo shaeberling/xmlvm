@@ -230,59 +230,59 @@
     </idconflicts>
     <conflicts>
         <constructor signature="NSData::byte[]int" type="Data">
-            <citem value="Copy" name="initWithBytes:length"/>
-            <citem value="Reuse" name="initWithBytesNoCopy:length"/>
+            <citem value="Copy" name="-initWithBytes:length:"/>
+            <citem value="Reuse" name="-initWithBytesNoCopy:length:"/>
         </constructor>
         <constructor signature="NSData::String" type="File">
-            <citem value="Mapped" name="initWithContentsOfMappedFile"/>
-            <citem value="Regular" name="initWithContentsOfFile"/>
+            <citem value="Mapped" name="-initWithContentsOfMappedFile:"/>
+            <citem value="Regular" name="-initWithContentsOfFile:"/>
         </constructor>
         <constructor signature="NSDate::double" type="ReferenceDate">
-            <citem value="SinceDate" name="initWithTimeIntervalSinceReferenceDate"/>
-            <citem value="SinceNow" name="initWithTimeIntervalSinceNow"/>
-            <citem value="Since1970" name="initWithTimeIntervalSince1970"/>
+            <citem value="SinceDate" name="-initWithTimeIntervalSinceReferenceDate:"/>
+            <citem value="SinceNow" name="-initWithTimeIntervalSinceNow:"/>
+            <citem value="Since1970" name="-initWithTimeIntervalSince1970:"/>
         </constructor>
         <constructor signature="NSFileWrapper::NSData" type="ContentType">
-            <citem value="NSData" name="initRegularFileWithContents"/>
-            <citem value="SerializedRepresentation" name="initWithSerializedRepresentation"/>
+            <citem value="NSData" name="-initRegularFileWithContents:"/>
+            <citem value="SerializedRepresentation" name="-initWithSerializedRepresentation:"/>
         </constructor>
         <constructor signature="NSFileWrapper::String" type="FileType">
-            <citem value="Regular" name="initWithPath"/>
-            <citem value="SymbolicLinkWithDestination" name="initSymbolicLinkWithDestination"/>
+            <citem value="Regular" name="-initWithPath:"/>
+            <citem value="SymbolicLinkWithDestination" name="-initSymbolicLinkWithDestination:"/>
         </constructor>
         <constructor signature="NSMutableData::int" type="Data">
-            <citem value="Capacity" name="initWithCapacity"/>
-            <citem value="Length" name="initWithLength"/>
+            <citem value="Capacity" name="-initWithCapacity:"/>
+            <citem value="Length" name="-initWithLength:"/>
         </constructor>
         <constructor signature="NSString::byte[]" type="CStringNullTerminated">
-            <citem value="UTF8" name="initWithUTF8String"/>
-            <citem value="Default" name="initWithCString"/>
+            <citem value="UTF8" name="-initWithUTF8String:"/>
+            <citem value="Default" name="-initWithCString:"/>
         </constructor>
         <constructor signature="NSString::byte[]int" type="CString">
-            <citem value="UTF8" name="initWithCString:encoding"/>
-            <citem value="Default" name="initWithCString:length"/>
+            <citem value="UTF8" name="-initWithCString:encoding:"/>
+            <citem value="Default" name="-initWithCString:length:"/>
         </constructor>
         <constructor signature="NSString::String" type="Type">
-            <citem value="String" name="initWithString"/>
-            <citem value="File" name="initWithContentsOfFile"/>
+            <citem value="String" name="-initWithString:"/>
+            <citem value="File" name="-initWithContentsOfFile:"/>
         </constructor>
         <constructor signature="NSSocketPort::intintintNSData" type="Location">
-            <citem value="Default" name="initWithProtocolFamily:socketType:protocol:address"/>
-            <citem value="Remote" name="initRemoteWithProtocolFamily:socketType:protocol:address"/>
+            <citem value="Default" name="-initWithProtocolFamily:socketType:protocol:address:"/>
+            <citem value="Remote" name="-initRemoteWithProtocolFamily:socketType:protocol:address:"/>
         </constructor>
         <constructor signature="NSURL::String" type="URLType">
-            <citem value="Any" name="initWithString"/>
-            <citem value="FileURL" name="initFileURLWithPath"/>
+            <citem value="Any" name="-initWithString:"/>
+            <citem value="FileURL" name="-initFileURLWithPath:"/>
         </constructor>
         <constructor signature="NSURLProtectionSpace::StringintStringStringString" type="ServerType">
-            <citem value="Default" name="initWithHost:port:protocol:realm:authenticationMethod"/>
-            <citem value="Proxy" name="initWithProxyHost:port:type:realm:authenticationMethod"/>
+            <citem value="Default" name="-initWithHost:port:protocol:realm:authenticationMethod:"/>
+            <citem value="Proxy" name="-initWithProxyHost:port:type:realm:authenticationMethod:"/>
         </constructor>
 
         <!-- resetnames sets the names to have a generic naming convention, instead of the given form the include file -->
         <constructor signature="UIColor::floatfloatfloatfloat" type="Colorspace" resetnames="true">
-            <citem value="RGBA" name=""/>
-            <citem value="HSBA" name=""/>
+            <citem value="RGBA" name="-initWithHue:saturation:brightness:alpha:"/>
+            <citem value="HSBA" name="-initWithRed:green:blue:alpha:"/>
         </constructor>
 
         <!-- Ignore these multiple constructors. We NEED to define them to acknowledge -->
@@ -384,7 +384,7 @@
         <type name="byte" map="Byte"/>
         <type name="boolean" map="BOOL"/>
         <type name="String" map="NSString"/>
-        <type name="List" map=""/>
+        <type name="List" map="NSArray"/>
         <type name="Set" map=""/>
         <type name="Map" map=""/>
     </returntypes>
@@ -392,6 +392,34 @@
      <!-- Mapping for internal classes -->
     <class name="UIView">
         <alias name ="UILayoutContainerView"/>
+        
+        <selector name="-initWithFrame:" autoReleasePool="true"/>
+        
+        <selector name="-removeFromSuperview">      
+            <injected-method>
+                <code language="c" mode="replace">
+                    <![CDATA[ XMLVM_VAR_THIZ;
+                     XMLVMUtil_ArrayList_remove(((org_xmlvm_ios_UIView*)(xmlvm_get_associated_c_object([thiz superview])))->fields.org_xmlvm_ios_UIView.acc_array_UIView, me);
+                     [thiz removeFromSuperView]; ]]>
+                </code>
+            </injected-method>
+        </selector>
+        
+        <selector name="-addSubview:">
+            <arg position="0" type="UIView" retain="true"/>
+        </selector>
+    </class>
+    
+    <class name="NSObject">
+        <selector name="-finalize">
+            <injected-method>
+                <code language="c" mode="replace">
+                    <![CDATA[ XMLVM_VAR_THIZ;
+                              [thiz removeExtraMembers];
+                              [thiz release];]]>
+                </code>
+            </injected-method>
+        </selector>
     </class>
     
     <class name="UILabel">
@@ -416,6 +444,8 @@
     
     <class name="NSDictionary">
         <alias name ="__NSCFDictionary"/>
+        <selector name="-allKeys" autoReleasePool="true"/>
+        <selector name="-objectsForKeys:notFoundMarker:" autoReleasePool="true"/>
     </class> 
     
     <class name="NSMutableDictionary">
@@ -432,7 +462,7 @@
             <signature>
                 <return type="String"/>
             </signature>
-            <code language="c">
+            <code language="c" mode="replace">
                 <![CDATA[return fromNSString(((org_xmlvm_ios_NSObject*) me)->fields.org_xmlvm_ios_NSObject.wrappedObjCObj);]]>
             </code>
         </injected-method>

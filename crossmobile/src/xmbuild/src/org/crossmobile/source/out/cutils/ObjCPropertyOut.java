@@ -75,7 +75,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
 
         StringBuilder methodCall = new StringBuilder();
         String returnVariableStr = "";
-        methodCall.append(XMLVM_VAR_THIZ);
+        methodCall.append(Constants.XMLVM_VAR_THIZ);
 
         if (((returnVariableStr = CMethodHelper
                 .getReturnVariable(method.getReturnType().toString())) != null)
@@ -100,19 +100,21 @@ public class ObjCPropertyOut extends CAnyMethodOut {
      */
     private String getSetterCode(CMethod method, CMethodHelper methodHelper) {
         String accString = "";
-        StringBuilder methodCall = new StringBuilder();
+        StringBuilder objCCall = new StringBuilder();
+        String beginListConversion = "";
+        String releaseList = "";
+        StringBuilder methodCode = new StringBuilder();
 
         try {
-            System.out.println(method.name);
             if (AdvisorWrapper.needsAccumulator(object.name)
                     || AdvisorWrapper.needsReplacer(object.name)) {
                 accString = injectAccumulatorReplacerCode(method.name);
             }
 
-            methodCall.append(XMLVM_VAR_THIZ + "\n");
+            methodCode.append(Constants.XMLVM_VAR_THIZ + Constants.N);
 
             if (method.derivesFromObjC())
-                methodCall.append("[thiz " + method.name + ":");
+                objCCall.append("[thiz " + method.name + ":");
             else
                 throw new Exception("Setter does not derive from objective C!");
 
@@ -120,20 +122,25 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             if ((arg.isEmpty()) || (arg.size() > 1))
                 throw new Exception("Argument list is empty or more thn 1");
 
+            if (arg.get(0).getType().toString().equals("List")) {
+                beginListConversion = CMethodHelper.getCodeToConvertToNSArray(1);
+                releaseList = CMethodHelper.getCodeToReleaseList(1);
+            }
+
             if (!methodHelper.ignore(arg.get(0).getType().toString()))
-                methodCall.append(methodHelper
-                        .parseArgumentType(arg.get(0).getType().toString(), 1));
+                objCCall.append(methodHelper.parseArgumentType(arg.get(0).getType().toString(), 1));
             else
                 return null;
 
-            methodCall.append("];");
-            methodCall.append(accString + "\n");
+            objCCall.append("];");
+            methodCode.append(beginListConversion).append(objCCall).append(accString).append(
+                    releaseList + Constants.N);
 
         } catch (Exception e) {
-            methodCall.delete(0, methodCall.length());
+            methodCode.delete(0, methodCode.length());
             System.out.println(e);
         }
-        return methodCall.toString();
+        return methodCode.toString();
     }
 
     /**
@@ -149,8 +156,8 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             if (prop.isRetain())
                 accString = getAccumulativeCode(1, prop.getType());
             else if (prop.isReplace())
-                accString = "\n\tjthiz->fields." + object.getcClassName() + "." + prop.getName()
-                        + " = n1;";
+                accString = Constants.NT + "jthiz->fields." + object.getcClassName() + "."
+                        + prop.getName() + " = n1;";
         }
 
         return accString.toString();

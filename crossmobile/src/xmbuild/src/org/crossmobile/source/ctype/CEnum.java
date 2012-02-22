@@ -55,12 +55,16 @@ public class CEnum extends CProcedural {
     public Map<String, List<String>> getNameParts(){
         
         HashMap<String, List<String>> map = new HashMap<String, List<String>>(); 
+        String selector = null;
         
         Iterator<Entry<String, String>> it = mapping.entrySet().iterator();
         while (it.hasNext()) {
               List<String> nameParts = new ArrayList<String>();
               Entry<String, String> pairs = it.next();
-              StringTokenizer st = new StringTokenizer(pairs.getValue(), ":");
+              if(pairs.getValue().startsWith("-") || pairs.getValue().startsWith("+")){
+                  selector = pairs.getValue().substring(1); 
+              }
+              StringTokenizer st = new StringTokenizer(selector, ":");
               while(st.hasMoreTokens()){
                   nameParts.add(st.nextToken());
               }

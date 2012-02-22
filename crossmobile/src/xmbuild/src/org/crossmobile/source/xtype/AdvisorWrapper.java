@@ -26,7 +26,7 @@ import org.crossmobile.source.guru.Advisor;
 
 /**
  * This class acts as an interface for the data that comes from the advisor.
- *
+ * 
  */
 public class AdvisorWrapper {
 
@@ -96,6 +96,25 @@ public class AdvisorWrapper {
     }
 
     /**
+     * In some cases, extra code needs to be injected at method level. This
+     * information is provided via the advice. This method checks, if any code
+     * has to be injected for a particular method.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @param objName
+     *            - name of the class
+     * @return true if code has to be injected; false otherwise.
+     */
+    public static boolean selectorHasCodeInjection(String selName, String objName) {
+        XObject obj = null;
+        if ((obj = getSpecialClass(objName)) != null) {
+            return obj.selectorHasInjectedCode(selName);
+        }
+        return false;
+    }
+
+    /**
      * In some cases, extra code needs to be injected which exists outside the
      * objective-c API. This information is provided via the advice. This method
      * checks, if any code has to be injected for a particular class.
@@ -104,12 +123,24 @@ public class AdvisorWrapper {
      *            - name of the class
      * @return true if code has to be injected; false otherwise.
      */
-    public static boolean classHasInjectedCode(String objectName) {
+    public static boolean classHasExternallyInjectedCode(String objectName) {
         XObject obj = null;
         if ((obj = getSpecialClass(objectName)) != null) {
-            return obj.hasInjectedCode();
+            return obj.hasExternallyInjectedCode();
         }
         return false;
+    }
+
+    /**
+     * Returns a list of code injections for a particular selector
+     * 
+     * @param objectName
+     *            - name of the class
+     * @return List of instances of XInjectedMethod class which contain the
+     *         information for code injection
+     */
+    public static XInjectedMethod getInjectedCodeForSelector(String selName, String objectName) {
+        return getSpecialClass(objectName).getInjectedCodeForSelector(selName);
     }
 
     /**
@@ -121,7 +152,7 @@ public class AdvisorWrapper {
      * @return List of instances of XInjectedMethod class which contain the
      *         information for code injection
      */
-    public static List<XInjectedMethod> getInjectedMethods(String objectName) {
-        return getSpecialClass(objectName).getInjectedMethods();
+    public static List<XInjectedMethod> getExternallyInjectedCode(String objectName) {
+        return getSpecialClass(objectName).getExternallyInjectedMethods();
     }
 }

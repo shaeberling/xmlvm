@@ -24,7 +24,6 @@ import java.util.List;
 
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
-import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorWrapper;
 import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XMethod;
@@ -40,8 +39,7 @@ import org.crossmobile.source.xtype.XObject;
  * 
  */
 public abstract class CAnyMethodOut {
-    protected CObject   object         = null;
-    static final String XMLVM_VAR_THIZ = "\n\tXMLVM_VAR_THIZ;";
+    protected CObject object = null;
 
 
     public CAnyMethodOut(CObject object) {
@@ -82,11 +80,9 @@ public abstract class CAnyMethodOut {
 
     protected String getAccumulativeCode(int position, String type) {
         StringBuilder accString = new StringBuilder();
-        accString.append("\n\tXMLVMUtil_ArrayList_add(jthiz->fields." + object.getcClassName()
-                + ".acc_Array, ");
-        accString.append("((" + COut.packageName + type + "*) n" + position + ")");
-        // TODO Change for cases where type is List<>
-        accString.append("->fields." + COut.packageName + "NSObject.wrappedObjCObj);");
+        accString.append(Constants.NT + "XMLVMUtil_ArrayList_add(jthiz->fields."
+                + object.getcClassName() + ".acc_array_" + object.name + ", n" + position + ");");
         return accString.toString();
     }
+
 }

@@ -73,15 +73,18 @@ public class Advisor extends DefaultHandler {
     private List<XArg> argList;
     private String requireAutoReleasePool;
     private ArrayList<XProperty> propertyList;
-    private ArrayList<XInjectedMethod> injectedMethodList;
     private XProperty property;
-    private String returnType;
-    private String language;
-    private StringBuilder injectedCode;
+    private List<String> aliasList;
+    private List<XInjectedMethod> injectedMethodList;
+    private XInjectedMethod injMethod;
     private String injectedMethodName;
     private String injectedMethodModifier;
+    private String returnType;
+    private String language;
+    private String mode;
+    private StringBuilder injectedCode;
     private boolean currentElement = false;
-    private List<String> aliasList;
+
     //
     private static String lastfile;
 
@@ -111,6 +114,7 @@ public class Advisor extends DefaultHandler {
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes at) throws SAXException {
+        
         if (qName.equals("native"))
             nativeTypes.add(at.getValue("type"));
         else if (qName.equals("typedef"))
@@ -159,6 +163,7 @@ public class Advisor extends DefaultHandler {
             propertyList = new ArrayList<XProperty>();
             methodList = new ArrayList<XMethod>();
             aliasList = new ArrayList<String>();
+            injectedMethodList = new ArrayList<XInjectedMethod>();
         } else if(qName.equals("selector")){
             requireAutoReleasePool = at.getValue("autoReleasePool");
             selectorName = at.getValue("name");
@@ -184,7 +189,7 @@ public class Advisor extends DefaultHandler {
         } else if(qName.equals("alias")) {   
             aliasList.add(at.getValue("name"));
         } else if(qName.equals("injected-method")){
-            injectedMethodList = new ArrayList<XInjectedMethod>();
+            injMethod = new XInjectedMethod();
             injectedMethodName = at.getValue("name");
             injectedMethodModifier = at.getValue("modifier");
         } else if(qName.equals("return")) {
@@ -192,8 +197,10 @@ public class Advisor extends DefaultHandler {
         } else if(qName.equals("code")){
             injectedCode = new StringBuilder();
             language = at.getValue("language");
+            mode = at.getValue("mode");
             currentElement  = true;
         }
+        
     }
 
     @Override
@@ -221,6 +228,9 @@ public class Advisor extends DefaultHandler {
             xmethod = new XMethod(selectorName, argList, requireAutoReleasePool);
             methodList.add(xmethod);
             argList = null;
+            if(injMethod!=null)
+                xmethod.setInjectedCode(injMethod);
+            injMethod = null;
         } else if(qName.equals("class")){
             xobject = new XObject(className, methodList, propertyList, aliasList, injectedMethodList);
             classObject.put(className, xobject);
@@ -228,18 +238,18 @@ public class Advisor extends DefaultHandler {
             propertyList = null;
             aliasList = null;
             injectedMethodList = null;
+            injMethod = null;
         } else if(qName.equals("injected-method")){
-            XInjectedMethod injMethod = new XInjectedMethod();
             injMethod.setReturnType(returnType);
-            injMethod.setCodelanguage(language);
-            injMethod.setCode(injectedCode.toString());
             injMethod.setName(injectedMethodName);
             injMethod.setModifier(injectedMethodModifier);
-            injectedCode = null;
-            injectedMethodList.add(injMethod);
+            XInjectedMethod im = injMethod;
+            if(injectedMethodName!=null)
+                injectedMethodList.add(im);
         } else if(qName.equals("code")){
+            injMethod.addCode(injectedCode.toString(), language, mode);
+            injectedCode = null;
             currentElement = false;
-            
         }
        
     }

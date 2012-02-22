@@ -27,6 +27,7 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.XInjectedMethod;
 
 /**
  * The class is used as code generator for methods for classes as well as
@@ -37,11 +38,9 @@ import org.crossmobile.source.xtype.AdvisorWrapper;
  */
 public class CMethodOut {
 
-    private Writer              out                     = null;
-    private CObject             object                  = null;
-    private CMethodHelper       methodHelper            = null;
-    private static final String AUTORELEASEPOOL_ALLOC   = "\n\tNSAutoreleasePool* p = [[NSAutoreleasePool alloc] init];\n";
-    private static final String AUTORELEASEPOOL_RELEASE = "\t[ p release];\n";
+    private Writer        out          = null;
+    private CObject       object       = null;
+    private CMethodHelper methodHelper = null;
 
 
     public CMethodOut(Writer out, CLibrary lib, CObject object) {
@@ -66,6 +65,10 @@ public class CMethodOut {
             String returnString = "";
             CAnyMethodOut methodType = null;
 
+            String initial = null;
+            String replaceable = null;
+            String end = null;
+
             String returnType = method.getReturnType().toString();
             if (!returnType.equals("void")) {
                 returnString = methodHelper.getReturnString(returnType);
@@ -89,19 +92,69 @@ public class CMethodOut {
 
             methodCall = methodType.emit(method, isStruct, methodHelper);
 
+            if (AdvisorWrapper.selectorHasCodeInjection(method.getSelectorName(), object.name)) {
+                XInjectedMethod iMethods = AdvisorWrapper.getInjectedCodeForSelector(method
+                        .getSelectorName(), object.name);
+                int index = 0;
+                while (index < iMethods.getInjectedCode().size()) {
+                    if (iMethods.getInjectedCode().get(index).getMode().equals("before"))
+                        initial = iMethods.getInjectedCode().get(index).getCode();
+                    else if (iMethods.getInjectedCode().get(index).getMode().equals("after"))
+                        end = iMethods.getInjectedCode().get(index).getCode();
+                    else if (iMethods.getInjectedCode().get(index).getMode().equals("replace"))
+                        replaceable = iMethods.getInjectedCode().get(index).getCode();
+                    index++;
+                }
+
+            }
+
             if (methodCall == null)
                 notImplemented = true;
 
             if (notImplemented == true)
-                out.append("\t" + CUtilsHelper.NOT_IMPLEMENTED);
+                out.append(Constants.T + Constants.NOT_IMPLEMENTED);
+            else if (replaceable != null)
+                out.append(replaceable);
             else {
+                if (initial != null)
+                    out.append(initial);
                 if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
-                    out.append(AUTORELEASEPOOL_ALLOC + methodCall + AUTORELEASEPOOL_RELEASE + "\t"
-                            + returnString);
+                    out.append(Constants.AUTORELEASEPOOL_ALLOC + methodCall
+                            + getArrayConversionString(returnType)
+                            + Constants.AUTORELEASEPOOL_RELEASE + Constants.T + returnString);
                 else
-                    out.append(methodCall + "\t" + returnString);
+                    out.append(methodCall + getArrayConversionString(returnType) + Constants.T
+                            + returnString);
+                if (end != null)
+                    out.append(end);
             }
-            out.append("\n" + CUtilsHelper.END_WRAPPER + "\n");
+            out.append(Constants.N + Constants.END_WRAPPER + Constants.N);
         }
+    }
+
+    /**
+     * In case of a return type being an List, necessary conversion has to be
+     * made from Obj-C NSArray.
+     * 
+     * @param returnType
+     *            - return type of the method
+     * @return - returns the code that needs to be generated if return type is
+     *         List
+     */
+    private String getArrayConversionString(String returnType) {
+        if (returnType.equals("List")) {
+            StringBuilder convString = new StringBuilder();
+            convString.append(Constants.NT + "JAVA_OBJECT jvc = XMLVMUtil_NEW_ArrayList();");
+            convString.append(Constants.NT + "int i = 0;");
+            convString.append(Constants.NT + "for (i = 0; i < [objCObj count]; i++) {");
+            convString.append(Constants.NTT + "NSObject* c = [objCObj objectAtIndex:i];");
+            convString.append(Constants.NTT + "JAVA_OBJECT jc = xmlvm_get_associated_c_object(c);");
+            convString.append(Constants.NTT + "if (jc == JAVA_NULL) {");
+            convString.append(Constants.NTTT + "XMLVM_INTERNAL_ERROR();" + Constants.NTT + "}");
+            convString.append(Constants.NTT + "XMLVMUtil_ArrayList_add(jvc, jc);" + Constants.NT
+                    + "}" + Constants.N);
+            return convString.toString();
+        } else
+            return "";
     }
 }

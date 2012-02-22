@@ -179,9 +179,9 @@ public class JavaOut implements Generator {
                     parseMethod(object, m, out);
         }
         
-        if (AdvisorWrapper.classHasInjectedCode(object.name)){
+        if (AdvisorWrapper.classHasExternallyInjectedCode(object.name)){
             out.append("\n\t/*\n\t * Injected methods\n\t */\n");
-            List<XInjectedMethod> iMethods = AdvisorWrapper.getInjectedMethods(object.name);
+            List<XInjectedMethod> iMethods = AdvisorWrapper.getExternallyInjectedCode(object.name);
             for (XInjectedMethod im : iMethods){
                 parseInjectedMethods(object, im, out);
             }

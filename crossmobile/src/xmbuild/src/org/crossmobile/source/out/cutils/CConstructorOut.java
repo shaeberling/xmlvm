@@ -37,6 +37,7 @@ import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
+import org.crossmobile.source.xtype.AdvisorWrapper;
 
 /**
  * This class is used to generate code for the constructors for classes as well
@@ -50,16 +51,13 @@ public class CConstructorOut {
 
     private Writer        out          = null;
     private CObject       object       = null;
-    private CLibrary      lib          = null;
     private CMethodHelper methodHelper = null;
 
 
     public CConstructorOut(Writer out, CLibrary lib, CObject object) {
         this.out = out;
         this.object = object;
-        this.lib = lib;
-        this.methodHelper = new CMethodHelper(this.object.name, this.object.getcClassName(),
-                this.lib);
+        this.methodHelper = new CMethodHelper(this.object.name, this.object.getcClassName(), lib);
     }
 
     /**
@@ -79,29 +77,30 @@ public class CConstructorOut {
         for (CConstructor con : object.getConstructors()) {
             arguments = con.getArguments();
 
+            cEnum = con.getEnum();
+            if (cEnum != null)
+                namePartsMap = cEnum.getNameParts();
+
+            out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), con
+                    .isOverloaded(), cEnum == null ? null : cEnum.name));
+
+            if (AdvisorWrapper.needsAutoReleasePool(con.getSelectorName(), object.name))
+                out.append(Constants.AUTORELEASEPOOL_ALLOC);
+
             if (isStruct) {
-                out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), false,
-                        null));
                 emitStructConstructor(arguments);
             } else {
                 if (arguments.isEmpty())
                     has_default_constructor = true;
 
-                if (con.isOverloaded()) {
-                    cEnum = con.getEnum();
-                    if (cEnum != null)
-                        namePartsMap = cEnum.getNameParts();
-                }
-                out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), con
-                        .isOverloaded(), cEnum == null ? null : cEnum.name));
-                if (con.isOverloaded()) {
-                    if (cEnum != null) {
-                        emitOverloadedConstructor(cEnum.name, namePartsMap, arguments);
-                    }
-                } else
+                if (con.isOverloaded() && cEnum != null)
+                    emitOverloadedConstructor(cEnum.name, namePartsMap, arguments);
+                else
                     emitObjectConstructor(con.getNameParts(), arguments);
             }
-            out.append(CUtilsHelper.END_WRAPPER + "\n");
+            if (AdvisorWrapper.needsAutoReleasePool(con.getSelectorName(), object.name))
+                out.append(Constants.AUTORELEASEPOOL_RELEASE);
+            out.append(Constants.END_WRAPPER + Constants.N);
         }
 
         if (!has_default_constructor)
@@ -110,7 +109,7 @@ public class CConstructorOut {
 
     /**
      * There are few constructors which are overloaded and hence enums are used
-     * fr this purpose. The code generation in such cases has to bbe handled in
+     * for this purpose. The code generation in such cases has to be handled in
      * a different way.
      * 
      * @param cEnumName
@@ -126,12 +125,12 @@ public class CConstructorOut {
         Iterator<Entry<String, List<String>>> it = namePartsMap.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, List<String>> pairs = it.next();
-            out.append("\n\t" + "if((" + object.getcClassName() + "_" + cEnumName + "*) n"
+            out.append(Constants.NT + "if((" + object.getcClassName() + "_" + cEnumName + "*) n"
                     + (arguments.size() + 1) + " == ");
-            out.append(object.getcClassName() + "_" + cEnumName + "_GET_" + pairs.getKey()
-                    + "())\n\t{");
+            out.append(object.getcClassName() + "_" + cEnumName + "_GET_" + pairs.getKey() + "())"
+                    + Constants.NT + "{");
             emitObjectConstructor(pairs.getValue(), arguments);
-            out.append("\t}\n");
+            out.append(Constants.T + "}" + Constants.N);
         }
     }
 
@@ -147,7 +146,7 @@ public class CConstructorOut {
         boolean isFirst = true;
         int i = 1;
 
-        out.append("\n\t" + object.name + " objCObj = " + object.name + "Make(");
+        out.append(Constants.NT + object.name + " objCObj = " + object.name + "Make(");
 
         for (CArgument arg : arguments) {
             if (!isFirst)
@@ -162,18 +161,21 @@ public class CConstructorOut {
                 out.append(object.getcClassName() + "* n" + (i++) + ")->fields." + COut.packageName
                         + "NSObject.wrappedObjCObj");
         }
-        out.append(");\n\t");
+        out.append(");" + Constants.NT);
 
-        out.append(object.getcClassName() + "* jObj = me;\n");
+        out.append(object.getcClassName() + "* jObj = me;" + Constants.N);
 
         for (CArgument arg : object.getVariables()) {
-            out.append("\tjObj->fields." + object.getcClassName() + "." + arg.name + "_ = ");
+            out.append(Constants.T + "jObj->fields." + object.getcClassName() + "." + arg.name
+                    + "_ = ");
             if (Advisor.isNativeType(arg.getType().toString())) {
-                out.append("objCObj." + arg.name + ";\n");
+                out.append("objCObj." + arg.name + ";" + Constants.N);
             } else if (CStruct.isStruct(arg.getType().toString()))
-                out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");\n");
+                out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");"
+                        + Constants.N);
             else
-                out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");\n");
+                out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");"
+                        + Constants.N);
         }
     }
 
@@ -189,13 +191,16 @@ public class CConstructorOut {
      */
     private void emitObjectConstructor(List<String> nameParts, List<CArgument> arguments)
             throws IOException {
-        StringBuilder string = new StringBuilder();
+        StringBuilder objCCall = new StringBuilder();
         String argType = null;
         int i = 1;
         boolean flag = true;
         boolean implemented = true;
+        StringBuilder methodCode = new StringBuilder();
+        StringBuilder beginListConversion = new StringBuilder("");
+        StringBuilder releaseList = new StringBuilder("");
 
-        string.append("\n\t" + object.name + "* objCObj = [[" + object.name + " alloc]");
+        objCCall.append(Constants.NT + object.name + "* objCObj = [[" + object.name + " alloc]");
 
         ListIterator<CArgument> iterator = arguments.listIterator();
 
@@ -207,38 +212,41 @@ public class CConstructorOut {
                     CArgument argument = (CArgument) iterator.next();
                     String parsedArg = null;
 
-                    string.append(" " + namePart + ":");
+                    if (argument.getType().toString().equals("List")) {
+                        beginListConversion.append(CMethodHelper.getCodeToConvertToNSArray(i));
+                        releaseList.append(CMethodHelper.getCodeToReleaseList(i));
+                    }
+
+                    objCCall.append(" " + namePart + ":");
                     argType = argument.getType().toString();
 
                     if (!methodHelper.ignore(argType)
                             && (parsedArg = methodHelper.parseArgumentType(argType, i)) != null) {
-                        string.append(parsedArg);
+                        objCCall.append(parsedArg);
                         i++;
-                    }
-
-                    else {
-                        string.delete(0, string.length());
-                        string.append("\n\tXMLVM_NOT_IMPLEMENTED()");
+                    } else {
+                        objCCall.delete(0, objCCall.length());
+                        objCCall.append(Constants.NT + "XMLVM_NOT_IMPLEMENTED();" + Constants.N);
                         implemented = false;
-                        flag = false;
                         break;
                     }
                 }
             } else {
-                string.append("init]");
+                objCCall.append("init];" + Constants.N);
                 flag = false;
             }
         }
 
-        if (flag == true) {
-            string.append("]");
-        }
-
-        string.append(";\n");
-        out.append(string);
-
         if (implemented) {
-            out.append("\t" + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(me, objCObj);\n");
+            if (flag == true)
+                objCCall.append("];");
+            methodCode.append(beginListConversion).append(objCCall).append(
+                    releaseList + Constants.N);
+            out.append(methodCode);
+            out.append(Constants.T + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(me, objCObj);"
+                    + Constants.N);
+        } else {
+            out.append(objCCall);
         }
     }
 
@@ -249,8 +257,8 @@ public class CConstructorOut {
      * @throws IOException
      */
     private void appendDefaultConstructor() throws IOException {
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
-        out.append("]\n");
-        out.append(CUtilsHelper.END_WRAPPER + "\n");
+        out.append(Constants.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
+        out.append("]" + Constants.N);
+        out.append(Constants.END_WRAPPER + Constants.N);
     }
 }

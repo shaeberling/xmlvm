@@ -49,7 +49,7 @@ public class CFunctionOut extends CAnyMethodOut {
      *            - true if the method is associated with a structure
      * @param methodHelper
      *            - instance of methodHelper used to get the code for argument
-     *            list
+     * 
      * @return Constructed string for the wrapper of C function; null if not
      *         implemented
      */
@@ -71,23 +71,72 @@ public class CFunctionOut extends CAnyMethodOut {
             if (parentIsStruct) {
                 methodCall
                         .append(methodHelper.getModifiedFunctionName(method.name, parentIsStruct));
-                argList = methodHelper.getArgList(arguments, method.isStatic(), true);
+                argList = getArgumentsToPass(arguments, method.isStatic(), true, methodHelper);
+            } else if ((tempName = methodHelper.getModifiedFunctionName(method.name, false)) != null) {
+                methodCall.append(tempName);
+                argList = getArgumentsToPass(arguments, method.isStatic(), false, methodHelper);
             } else {
-                if ((tempName = methodHelper.getModifiedFunctionName(method.name, false)) != null) {
-                    methodCall.append(tempName);
-                    argList = methodHelper.getArgList(arguments, method.isStatic(), false);
-                } else {
-                    methodCall.append(method.name);
-                    argList = methodHelper.getArgList(arguments, method.isStatic(), false);
-                }
+                methodCall.append(method.name);
+                argList = getArgumentsToPass(arguments, method.isStatic(), false, methodHelper);
             }
+
         } else {
             return null;
         }
         if (argList == null)
             return null;
 
-        methodCall.append(argList + ";\n");
+        methodCall.append(argList + ";" + Constants.N);
         return methodCall.toString();
+    }
+
+    /**
+     * Parses the list of arguments for a C-function and returns the string
+     * containing comma separated argument list
+     * 
+     * @param arguments
+     *            - List of arguments for a function
+     * @param isStatic
+     *            - if the method is static.
+     * @param parentIsStruct
+     *            - if the method is associated with a structure
+     * @param methodHelper
+     *            - an instance of CMethodHelper used to get the code for
+     *            arguments
+     * @return returns the string with comma separated arguments; If the type of
+     *         argument is currently in ignore list then return null.
+     */
+    public String getArgumentsToPass(List<CArgument> arguments, boolean isStatic,
+            boolean parentIsStruct, CMethodHelper methodHelper) {
+
+        StringBuilder argList = new StringBuilder();
+        boolean isFirst = true;
+        int i = 1;
+
+        argList.append("(");
+
+        if (!isStatic && parentIsStruct) {
+            argList.append("to" + object.name + "(me)");
+            isFirst = false;
+        }
+
+        for (CArgument arg : arguments) {
+
+            String argType = arg.getType().toString();
+            String parsedArg = null;
+
+            if (!isFirst)
+                argList.append(",");
+            isFirst = false;
+
+            if (!methodHelper.ignore(argType)
+                    && (parsedArg = methodHelper.parseArgumentType(argType, i)) != null) {
+                argList.append(parsedArg);
+                i++;
+            } else
+                return null;
+        }
+        argList.append(")");
+        return argList.toString();
     }
 }

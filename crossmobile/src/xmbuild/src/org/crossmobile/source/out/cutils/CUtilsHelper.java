@@ -36,12 +36,6 @@ import org.crossmobile.source.ctype.CStruct;
  */
 public class CUtilsHelper {
 
-    public static final String     BEGIN_WRAPPER   = "\n//XMLVM_BEGIN_WRAPPER";
-    public static final String     END_WRAPPER     = "//XMLVM_END_WRAPPER";
-    public static final String     NOT_IMPLEMENTED = "\nXMLVM_NOT_IMPLEMENTED();";
-    public static final String     BEGIN_IMPL      = "\n//XMLVM_BEGIN_IMPLEMENTATION";
-    public static final String     END_IMPL        = "//XMLVM_END_IMPLEMENTATION";
-
     private static String          objectClassName = null;
     private static List<CArgument> arguments       = null;
     private final static int       METHOD          = 1;
@@ -69,9 +63,9 @@ public class CUtilsHelper {
         String argType = null;
 
         if (type == METHOD)
-            str.append(BEGIN_WRAPPER + "[" + objectClassName + "_" + methodName + "__");
+            str.append(Constants.BEGIN_WRAPPER + "[" + objectClassName + "_" + methodName + "__");
         if (type == CONSTRUCTOR)
-            str.append(BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
+            str.append(Constants.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
         for (CArgument arg : arguments) {
             argType = arg.getType().toString();
             if (argType.equals("Object"))
@@ -82,13 +76,20 @@ public class CUtilsHelper {
                 str.append("_java_lang_String");
             else if (CStruct.isStruct(argType))
                 str.append("_" + COut.packageName + argType);
-            else
-                str.append("_java_lang_Object");
+            else if (argType.equals("List"))
+                str.append("_java_util_List");
+            else if (argType.equals("Map"))
+                str.append("_java_util_Map");
+            else if (argType.equals("Set"))
+                str.append("_java_util_Set");
+            else if (!argType.contains("Reference") || !argType.contains("[]") || !argType.contains("..."))
+                str.append("_" + COut.packageName + argType);
+       
         }
 
         if (constructorOverloaded)
             str.append("_" + objectClassName + "_" + enumName);
-        str.append("]");
+        str.append("]" + Constants.N);
 
         return str.toString();
 

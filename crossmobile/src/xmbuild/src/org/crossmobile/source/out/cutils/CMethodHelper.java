@@ -20,10 +20,8 @@
 
 package org.crossmobile.source.out.cutils;
 
-import java.util.List;
 import java.util.Set;
 
-import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CFunction;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CStruct;
@@ -65,11 +63,13 @@ public class CMethodHelper {
             if (retType.equals("Object"))
                 return "return xmlvm_get_associated_c_object (objCObj);";
             else if (Advisor.isNativeType(retType))
-                return "return (objCObj);";
+                return "return objCObj;";
             else if (CStruct.isStruct(retType))
                 return "return from" + retType + "(objCObj);";
             else if (retType.equals("String"))
                 return "return fromNSString (objCObj);";
+            else if (retType.equals("List"))
+                return "return jvc;";
             else
                 return "return xmlvm_get_associated_c_object (objCObj);";
         } else
@@ -91,8 +91,7 @@ public class CMethodHelper {
         if (name.contains("Reference"))
             return true;
         else if (name.contains("[]") || name.contains("...") || Advisor.isInIgnoreList(name)
-                || lib.getObject(name).isProtocol() || name.equals("Map") || name.equals("List")
-                || name.equals("Set"))
+                || lib.getObject(name).isProtocol() || name.equals("Map") || name.equals("Set"))
             return true;
         else
             return false;
@@ -124,55 +123,6 @@ public class CMethodHelper {
     }
 
     /**
-     * Parses the list of arguments for a C-function and returns the string
-     * containing comma separated argument list
-     * 
-     * @param arguments
-     *            - List of arguments for a function
-     * @param isStatic
-     *            - if the method is static.
-     * @param parentIsStruct
-     *            - if the method is associated with a structure
-     * @return returns the string with comma separated arguments; If the type of
-     *         argument is currently in ignore list then return null.
-     */
-    public String getArgList(List<CArgument> arguments, boolean isStatic, boolean parentIsStruct) {
-
-        StringBuilder argList = new StringBuilder();
-        boolean isFirst = true;
-        int i = 1;
-
-        argList.append("(");
-
-        if (!isStatic && parentIsStruct) {
-            argList.append("to" + objectName + "(me)");
-            isFirst = false;
-        }
-        if (arguments.isEmpty())
-            argList.append(")");
-
-        else {
-            for (CArgument arg : arguments) {
-
-                String argType = arg.getType().toString();
-                String parsedArg = null;
-
-                if (!isFirst)
-                    argList.append(",");
-                isFirst = false;
-
-                if (!ignore(argType) && (parsedArg = parseArgumentType(argType, i)) != null) {
-                    argList.append(parsedArg);
-                    i++;
-                } else
-                    return null;
-            }
-            argList.append(")");
-        }
-        return argList.toString();
-    }
-
-    /**
      * The necessary processing needs to be done based on the data type of the
      * argument
      * 
@@ -183,7 +133,9 @@ public class CMethodHelper {
      * @return - returns processed string for a particular argument
      */
     public String parseArgumentType(String argType, int i) {
-        if (argType.equals("Object")) {
+        if (argType.equals("List")) {
+            return "ObjCArr" + i;
+        } else if (argType.equals("Object")) {
             return "((" + COut.packageName + "NSObject*) n" + i + ")->fields." + COut.packageName
                     + "NSObject.wrappedObjCObj";
         } else if (Advisor.isNativeType(argType)) {
@@ -193,8 +145,8 @@ public class CMethodHelper {
         } else if (argType.contains("String")) {
             return "toNSString" + "(n" + i + ")";
         } else {
-            return "((" + objectName + "*) (" + objectCName + "*) n" + i + ")->fields."
-                    + COut.packageName + "NSObject.wrappedObjCObj";
+            return "(" + objectName + "*) (((" + objectCName + "*) n" + i + ")->fields."
+                    + COut.packageName + "NSObject.wrappedObjCObj)";
         }
     }
 
@@ -233,17 +185,45 @@ public class CMethodHelper {
 
         if (!returnType.equals("void")) {
             if ((mappedType = getMappedDataType(returnType)) != null)
-                returnVariable.append("\n\t" + mappedType);
+                returnVariable.append(Constants.NT + mappedType);
             else
                 return null;
 
             if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
-                    || returnType.equals("Object"))
+                    || returnType.equals("Object") || returnType.equals("List"))
                 returnVariable.append("*");
 
             returnVariable.append(" objCObj = ");
         } else
             returnVariable.append("");
         return returnVariable.toString();
+    }
+
+    public static String getCodeToReleaseList(int i) {
+        return Constants.NT + "[ObjCArr" + i + " release];" + Constants.N;
+    }
+
+    /**
+     * In case an argument is a list, thn it needs to be converted to ObjC
+     * NSArray before the actual ObjC call
+     * 
+     * @param i
+     *            - index for the argument
+     * @return - returns the code required for conversion to NSArray
+     */
+    public static String getCodeToConvertToNSArray(int i) {
+        StringBuilder listConverionCode = new StringBuilder();
+        listConverionCode
+                .append("NSMutableArray* ObjCArr" + i + "= [[NSMutableArray alloc] init];");
+        listConverionCode.append(Constants.NT + "int size" + i + " = XMLVMUtil_ArrayList_size(n"
+                + i + ");");
+        listConverionCode.append(Constants.NT + "for (int i = 0; i < size" + i + "; i++) {");
+        listConverionCode.append(Constants.NTT + COut.packageName
+                + "NSObject* jobj = XMLVMUtil_ArrayList_get(n" + i + ", i);");
+        listConverionCode.append(Constants.NTT + "NSObject* ObjCObj = jobj->fields."
+                + COut.packageName + "NSObject.wrappedObjCObj;");
+        listConverionCode.append(Constants.NTT + "[ObjCArr" + i + " addObject: ObjCObj];"
+                + Constants.NT + "}" + Constants.NT);
+        return listConverionCode.toString();
     }
 }

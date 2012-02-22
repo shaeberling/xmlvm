@@ -57,9 +57,9 @@ public class CObjectOut {
      * @throws IOException
      */
     public void emitImpl() throws IOException {
-        out.append(CUtilsHelper.BEGIN_IMPL + "\n");
+        out.append(Constants.BEGIN_IMPL + Constants.N);
         emitWrapperCreator();
-        out.append(CUtilsHelper.END_IMPL + "\n");
+        out.append(Constants.END_IMPL + Constants.N);
         emitWrapperRegistration();
         CConstructorOut cConsOut = new CConstructorOut(out, lib, object);
         cConsOut.emitConstructors(false);
@@ -73,15 +73,17 @@ public class CObjectOut {
      * @throws IOException
      */
     private void emitWrapperRegistration() throws IOException {
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__INIT_" + object.getcClassName() + "]\n");
+        out.append(Constants.BEGIN_WRAPPER + "[__INIT_" + object.getcClassName() + "]"
+                + Constants.N);
         if (!object.name.contains("NSObject"))
-            out.append("xmlvm_register_wrapper_creator(__WRAPPER_CREATOR);\n");
-        out.append(CUtilsHelper.END_WRAPPER + "\n");
+            out.append("xmlvm_register_wrapper_creator(__WRAPPER_CREATOR);" + Constants.N);
+        out.append(Constants.END_WRAPPER + Constants.N);
 
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__DELETE_" + object.getcClassName() + "]\n");
+        out.append(Constants.BEGIN_WRAPPER + "[__DELETE_" + object.getcClassName() + "]"
+                + Constants.N);
         if (!object.name.contains("NSObject"))
-            out.append("__DELETE_" + COut.packageName + "NSObject(me, client_data);\n");
-        out.append(CUtilsHelper.END_WRAPPER + "\n");
+            out.append("__DELETE_" + COut.packageName + "NSObject(me, client_data);" + Constants.N);
+        out.append(Constants.END_WRAPPER + Constants.N);
 
     }
 
@@ -96,21 +98,22 @@ public class CObjectOut {
             List<String> aliasList = null;
 
             out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
-            out.append(" NSObject* wrappedObjCObj){\n\t");
-            out.append("" + COut.packageName
-                    + "NSObject_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);\n");
+            out.append(" NSObject* wrappedObjCObj){" + Constants.NT);
+            out.append("" + COut.packageName + "NSObject_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);"
+                    + Constants.N);
 
             if (AdvisorWrapper.needsAccumulator(object.name)) {
-                out.append(object.getcClassName() + "* thiz = (" + object.getcClassName()
-                        + "*)me;\n");
-                out.append("thiz->fields." + object.getcClassName()
-                        + ".acc_Array = XMLVMUtil_NEW_ArrayList();\n");
+                out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"
+                        + Constants.N);
+                out.append("thiz->fields." + object.getcClassName() + ".acc_array_" + object.name
+                        + " = XMLVMUtil_NEW_ArrayList();" + Constants.N);
             }
 
-            out.append("}");
+            out.append("}" + Constants.N);
 
-            out.append("\n\nstatic JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)\n{");
-            out.append("\n\tif([obj class] == [" + object.name + " class]");
+            out.append(Constants.N + "static JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)"
+                    + Constants.N + "{");
+            out.append(Constants.NT + "if([obj class] == [" + object.name + " class]");
 
             if (obj != null) {
                 if ((aliasList = obj.getAliasList()) != null)
@@ -119,13 +122,14 @@ public class CObjectOut {
                                 + "\"])");
             }
 
-            out.append(") \n\t{\n");
+            out.append(") " + Constants.NT + "{" + Constants.N);
 
-            out.append("\t\t[obj retain];\n");
-            out.append("\t\tJAVA_OBJECT jobj = __NEW_" + object.getcClassName() + "();\n\t\t");
-            out.append(object.getcClassName() + "_INTERNAL_CONSTRUCTOR(jobj, obj);\n");
-            out.append("\t\treturn jobj;\n\t}\n\t");
-            out.append("return JAVA_NULL;\n}\n");
+            out.append(Constants.TT + "[obj retain];" + Constants.N);
+            out.append(Constants.TT + "JAVA_OBJECT jobj = __NEW_" + object.getcClassName() + "();"
+                    + Constants.NTT);
+            out.append(object.getcClassName() + "_INTERNAL_CONSTRUCTOR(jobj, obj);" + Constants.N);
+            out.append(Constants.TT + "return jobj;" + Constants.NT + "}" + Constants.NT);
+            out.append("return JAVA_NULL;" + Constants.N + "}" + Constants.N);
         }
 
     }

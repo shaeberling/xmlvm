@@ -54,10 +54,10 @@ public class CStructOut {
      * @throws IOException
      */
     public void emitImpl() throws IOException {
-        out.append(CUtilsHelper.BEGIN_IMPL + "\n");
+        out.append(Constants.BEGIN_IMPL + Constants.N);
         emitConversionToObjCObject();
         emitConversionToJavaObject();
-        out.append(CUtilsHelper.END_IMPL + "\n");
+        out.append(Constants.END_IMPL + Constants.N);
         emitNewObjectCreation();
         CConstructorOut cConsOut = new CConstructorOut(out, lib, object);
         cConsOut.emitConstructors(true);
@@ -71,16 +71,19 @@ public class CStructOut {
      * @throws IOException
      */
     private void emitNewObjectCreation() throws IOException {
-        out.append(CUtilsHelper.BEGIN_WRAPPER + "[__NEW_" + object.getcClassName() + "]\n");
+        out
+                .append(Constants.BEGIN_WRAPPER + "[__NEW_" + object.getcClassName() + "]"
+                        + Constants.N);
         for (CArgument var : object.getVariables()) {
 
             if (CStruct.isStruct(var.getType().toString())) {
-                out.append("\tme->fields." + object.getcClassName() + "." + var.name + "_");
+                out.append(Constants.T + "me->fields." + object.getcClassName() + "." + var.name
+                        + "_");
                 out.append(" = __NEW_" + lib.getPackagename().replace(".", "_") + "_"
-                        + var.getType().toString() + "();\n");
+                        + var.getType().toString() + "();" + Constants.N);
             }
         }
-        out.append(CUtilsHelper.END_WRAPPER + "\n");
+        out.append(Constants.END_WRAPPER + Constants.N);
     }
 
     /**
@@ -91,23 +94,24 @@ public class CStructOut {
     private void emitConversionToJavaObject() throws IOException {
         String decl = "JAVA_OBJECT from" + object.getName() + "(" + object.getName() + " obj)";
 
-        out.append(decl + "\n{\n");
-        out.append("\t" + object.getcClassName() + "* jObj = __NEW_" + object.getcClassName()
-                + "();\n");
-        out.append("\t" + object.getcClassName() + "___INIT___(jObj);\n");
+        out.append(decl + Constants.N + "{" + Constants.N);
+        out.append(Constants.T + object.getcClassName() + "* jObj = __NEW_"
+                + object.getcClassName() + "();" + Constants.N);
+        out.append(Constants.T + object.getcClassName() + "___INIT___(jObj);" + Constants.N);
 
         if (object.hasVariables()) {
             for (CArgument var : object.getVariables()) {
                 if (CStruct.isStruct(var.getType().toString())) {
-                    out.append("\tjObj->fields." + object.getcClassName() + "." + var.name
-                            + "_ = from" + var.getType() + "(obj." + var.name + ");\n");
+                    out.append(Constants.T + "jObj->fields." + object.getcClassName() + "."
+                            + var.name + "_ = from" + var.getType() + "(obj." + var.name + ");"
+                            + Constants.N);
                 } else {
-                    out.append("\tjObj->fields." + object.getcClassName() + "." + var.name + "_ = "
-                            + "obj." + var.name + ";\n");
+                    out.append(Constants.T + "jObj->fields." + object.getcClassName() + "."
+                            + var.name + "_ = " + "obj." + var.name + ";" + Constants.N);
                 }
             }
         }
-        out.append("\treturn jObj;\n}\n");
+        out.append(Constants.T + "return jObj;" + Constants.N + "}" + Constants.N);
     }
 
     /**
@@ -119,25 +123,26 @@ public class CStructOut {
     private void emitConversionToObjCObject() throws IOException {
         String decl = object.name + " " + "to" + object.name + "(void *obj)";
 
-        out.append(decl + "\n{\n");
-        out.append("\t" + object.getcClassName() + "*").append(" objCObj = obj;\n");
-        out.append("\t" + object.getName() + " toRet;\n");
+        out.append(decl + Constants.N + "{" + Constants.N);
+        out.append(Constants.T + object.getcClassName() + "*").append(
+                " objCObj = obj;" + Constants.N);
+        out.append(Constants.T + object.getName() + " toRet;" + Constants.N);
 
         if (object.hasVariables()) {
             for (CArgument var : object.getVariables()) {
                 if (CStruct.isStruct(var.getType().toString())) {
-                    out.append("\ttoRet." + var.name + " = to" + var.getType()
-                            + "(objCObj->fields." + object.getcClassName() + "." + var.name
-                            + "_);\n");
+                    out.append(Constants.T + "toRet." + var.name + " = to" + var.getType()
+                            + "(objCObj->fields." + object.getcClassName() + "." + var.name + "_);"
+                            + Constants.N);
                 } else {
-                    out.append("\ttoRet." + var.name + " = " + "objCObj->fields."
-                            + object.getcClassName() + "." + var.name + "_;\n");
+                    out.append(Constants.T + "toRet." + var.name + " = " + "objCObj->fields."
+                            + object.getcClassName() + "." + var.name + "_;" + Constants.N);
                 }
             }
         }
 
-        out.append("\treturn toRet;\n");
-        out.append("}\n");
+        out.append(Constants.T + "return toRet;" + Constants.N);
+        out.append("}" + Constants.N);
     }
 
 }
