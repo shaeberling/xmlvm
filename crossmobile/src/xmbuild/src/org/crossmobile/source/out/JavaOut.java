@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
+
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CConstructor;
 import org.crossmobile.source.ctype.CEnum;
@@ -27,10 +28,13 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CType;
+import org.crossmobile.source.ctype.ObjCSelector;
+import org.crossmobile.source.ctype.ObjCSelector.Parameter;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.guru.Reporter.Tuplet;
-import org.crossmobile.source.utils.WriteCallBack;
+import org.crossmobile.source.out.cutils.ObjCSelectorUtil;
 import org.crossmobile.source.utils.FileUtils;
+import org.crossmobile.source.utils.WriteCallBack;
 import org.crossmobile.source.xtype.AdvisorWrapper;
 import org.crossmobile.source.xtype.XInjectedMethod;
 
@@ -91,7 +95,11 @@ public class JavaOut implements Generator {
         
         out.append(objectprefix);
 
-        String type = object.isProtocol() ? (object.hasOptionalMethod() ? "abstract class" : "interface") : "class";
+        String type = "class";
+        if (object.isProtocol()) {
+            type = object.hasOptionalMethod() ? "abstract class" : "interface";
+            out.append("@org.xmlvm.XMLVMDelegate(protocolType = \"" + object.getName() + "\")\n");
+        }
         out.append("public ").append(type).append(" ");
 
         out.append(object.getName());
@@ -195,9 +203,45 @@ public class JavaOut implements Generator {
         out.append(DUMMYBODY);        
     }
 
+    /**
+     * @param selector the non-null Obj-C selector
+     * @return
+     */
+    private static String parseDelegateMethod(ObjCSelector selector) {
+        int i = 0;
+        StringBuilder sb = new StringBuilder();
+        for (Parameter parm : selector.getParameters()) {
+            if (i++ == 0)
+                sb.append("\n\t\t");
+            else
+                sb.append(",\n\t\t");
+            sb.append("@org.xmlvm.XMLVMDelegateMethod.Param(");
+            sb.append("type = \"" + parm.getType().getType() + "\"");
+            if (!parm.getType().isPointer()) {
+                sb.append(", isStruct = true");
+            }
+            if (parm.getSelectorParamName() != null && !parm.getSelectorParamName().trim().equals("")) {
+                sb.append(", name = \"" + parm.getSelectorParamName() + "\"");
+            }
+            sb.append(")");
+        }
+        return "\t@org.xmlvm.XMLVMDelegateMethod(selector = \"" + selector.getLeadingName()
+                + "\", params = {" + sb.toString() + "\n\t})\n";
+    }
+
     private void parseMethod(CObject parent, CMethod m, Writer out) throws IOException {
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
+// TODO Also handle non-protocols requiring wrappers, such as UIView
+        if (parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty()) {
+            String selectorDefinition = m.getDefinitions().get(0);
+            ObjCSelector selector = ObjCSelectorUtil.toObjCSelector(selectorDefinition);
+            if (selector == null) {
+                throw new NullPointerException("Did not expect null ObjCSelector, but found one for \"" + selectorDefinition + "\"");
+            } else {
+                out.append(parseDelegateMethod(selector));
+            }
+        }
         out.append("\tpublic ");
         if (m.isStatic())
             out.append("static ");
@@ -223,8 +267,12 @@ public class JavaOut implements Generator {
         out.append(name).append("() {}\n");
     }
 
+    private static String getParseType(CType type, boolean originalName) {
+        return originalName ? type.getProcessedName() : type.toString();
+    }
+
     private void parseType(CType type, boolean originalname, Writer out) throws IOException {
-        out.append(originalname ? type.getProcessedName() : type.toString());
+        out.append(getParseType(type, originalname));
     }
 
     private void parseArgumentList(List<CArgument> args, CObject parent, CEnum overloadenum, Writer out) throws IOException {

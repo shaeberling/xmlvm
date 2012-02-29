@@ -45,7 +45,7 @@ public class CAny implements Serializable {
         definition.addAll(other.definition);
     }
 
-    public Iterable<String> getDefinitions() {
+    public List<String> getDefinitions() {
         return definition;
     }
 
