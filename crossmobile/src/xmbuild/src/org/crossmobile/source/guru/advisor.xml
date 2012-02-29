@@ -341,8 +341,10 @@
         <ignore name = "SecCertificate"/>
         <ignore name = "SecKey"/>
         <ignore name = "SecIdentity"/>
+        <ignore name = "Protocol"/>
         
         <ignore name = "NSZone"/>
+        <ignore name = "NSConnection"/>
         <ignore name = "NSURLHandle"/>
         <ignore name = "CFData"/>
         <ignore name = "CFRunLoop"/>

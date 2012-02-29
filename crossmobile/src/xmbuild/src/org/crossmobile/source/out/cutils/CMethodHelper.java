@@ -145,8 +145,8 @@ public class CMethodHelper {
         } else if (argType.contains("String")) {
             return "toNSString" + "(n" + i + ")";
         } else {
-            return "(" + objectName + "*) (((" + objectCName + "*) n" + i + ")->fields."
-                    + COut.packageName + "NSObject.wrappedObjCObj)";
+            return "(" + argType + "*) (((" + COut.packageName + argType + "*) n" + i + ")->fields."
+            + COut.packageName + "NSObject.wrappedObjCObj)";
         }
     }
 
