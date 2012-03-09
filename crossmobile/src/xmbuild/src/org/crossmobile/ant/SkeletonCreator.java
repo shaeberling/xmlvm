@@ -26,6 +26,7 @@ import java.io.ObjectOutputStream;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
 import org.crossmobile.source.ctype.CLibrary;
+import org.crossmobile.source.ctype.CType;
 import org.crossmobile.source.out.COut;
 import org.crossmobile.source.out.JavaOut;
 
@@ -91,6 +92,10 @@ public class SkeletonCreator extends Task {
             library = readCLibraryFromSdkPath();
 
             writeSerializedCLibrary(library, serializedLibraryDirectory);
+        } else {
+            // The CLibrary was loaded from a serialized instance. Populate the typedefs for CType from the CLibrary.
+            // E.g. Make sure that new CType("UIInterfaceOrientation") has a TypeID of "int" instead of "UIInterfaceOrientation".
+            CType.reregisterTypedefs(library);
         }
 
         if (option.equals("gen-c-wrapper")) {

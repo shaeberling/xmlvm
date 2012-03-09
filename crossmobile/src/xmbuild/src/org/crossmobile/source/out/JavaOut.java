@@ -30,6 +30,7 @@ import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CType;
 import org.crossmobile.source.ctype.ObjCSelector;
 import org.crossmobile.source.ctype.ObjCSelector.Parameter;
+import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.guru.Reporter.Tuplet;
 import org.crossmobile.source.out.cutils.ObjCSelectorUtil;
@@ -211,12 +212,24 @@ public class JavaOut implements Generator {
         int i = 0;
         StringBuilder sb = new StringBuilder();
         for (Parameter parm : selector.getParameters()) {
+            // Get the original Obj-C type, such as "int" or "UIInterfaceOrientation"
+            String origObjCType = parm.getType().getType();
+            // Considering the origObjCType may be a "typedef", get the actual type, such as "int", but NOT "UIInterfaceOrientation"
+            String type = getParseType(new CType(origObjCType), false);
+            if ("Object".equals(type) || !Advisor.isNativeType(type)) {
+                type = origObjCType;
+            }
+            String typeMapping = Advisor.getDataTypeMapping(type);
+            if (typeMapping != null) {
+                type = typeMapping;
+            }
+
             if (i++ == 0)
                 sb.append("\n\t\t");
             else
                 sb.append(",\n\t\t");
             sb.append("@org.xmlvm.XMLVMDelegateMethod.Param(");
-            sb.append("type = \"" + parm.getType().getType() + "\"");
+            sb.append("type = \"" + type + "\"");
             if (!parm.getType().isPointer()) {
                 sb.append(", isStruct = true");
             }

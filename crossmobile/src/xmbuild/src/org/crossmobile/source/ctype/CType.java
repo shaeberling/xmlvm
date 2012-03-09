@@ -186,6 +186,41 @@ public class CType implements Serializable {
         return typeid.name.equals("id");
     }
 
+    /**
+     * Re-register the typedefs into the static map.
+     * 
+     * E.g. key="UIInterfaceOrientation", value="int". This way, when
+     * constructing new CType("UIInterfaceOrientation"), the TypeID is "int"
+     * instead of "UIInterfaceOrientation".
+     * 
+     * This is only necessary if the CLibrary was loaded from a serialized
+     * instance, since the map would otherwise be populated during the CLibrary
+     * construction.
+     * 
+     * @param library
+     *            the CLibrary from which to reload "CType"s
+     */
+    public static void reregisterTypedefs(CLibrary library) {
+        for (CObject c : library.getObjects()) {
+            if (c.getSuperclass() != null) {
+                registerTypeID(c.getSuperclass().getProcessedName(), c.getSuperclass().typeid);
+            }
+            for (CType ifc : c.getInterfaces()) {
+                registerTypeID(ifc.getProcessedName(), ifc.typeid);
+            }
+            for (CMethod m : c.getMethods()) {
+                registerTypeID(m.getReturnType().getProcessedName(), m.getReturnType().typeid);
+                for (CArgument a : m.getArguments()) {
+                    registerTypeID(a.getType().getProcessedName(), a.getType().typeid);
+                }
+            }
+        }
+    }
+
+    private static void registerTypeID(String processedName, TypeID typeId) {
+        TypeID.types.put(processedName, typeId);
+    }
+
     // New type will be equal to nativetype
     public static String registerTypedef(String systemtype, String newtype) {
         if (systemtype.equals(newtype))
