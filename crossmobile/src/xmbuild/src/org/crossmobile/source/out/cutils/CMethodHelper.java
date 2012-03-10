@@ -37,15 +37,13 @@ import org.crossmobile.source.out.COut;
  */
 public class CMethodHelper {
 
-    private String         objectName  = null;
-    private String         objectCName = null;
-    private CLibrary       lib         = null;
-    private Set<CFunction> func        = null;
+    private String         objectName = null;
+    private CLibrary       lib        = null;
+    private Set<CFunction> func       = null;
 
 
-    CMethodHelper(String objectName, String objectCName, CLibrary lib) {
+    CMethodHelper(String objectName, CLibrary lib) {
         this.objectName = objectName;
-        this.objectCName = objectCName;
         this.lib = lib;
         this.func = lib.getFunctions();
     }
@@ -58,7 +56,7 @@ public class CMethodHelper {
      *            - return type of the method
      * @return 'return statement' for a particular method
      */
-    public String getReturnString(String retType) {
+    public String getReturnString(String retType, StringBuilder classInitializer) {
         if (!ignore(retType)) {
             if (retType.equals("Object"))
                 return "return xmlvm_get_associated_c_object (objCObj);";
@@ -70,8 +68,14 @@ public class CMethodHelper {
                 return "return fromNSString (objCObj);";
             else if (retType.equals("List"))
                 return "return jvc;";
-            else
+            else {
+                if (!retType.equals("Class"))
+                    classInitializer.append(Constants.T + "if (!__TIB_"
+                            + lib.getPackagename().replace(".", "_") + "_" + retType
+                            + ".classInitialized) __INIT_" + lib.getPackagename().replace(".", "_")
+                            + "_" + retType + "();" + Constants.N);
                 return "return xmlvm_get_associated_c_object (objCObj);";
+            }
         } else
             return null;
 
@@ -90,8 +94,11 @@ public class CMethodHelper {
         // Array not handled yet!
         if (name.contains("Reference"))
             return true;
-        else if (name.contains("[]") || name.contains("...") || Advisor.isInIgnoreList(name)
-                || lib.getObject(name).isProtocol() || name.equals("Map") || name.equals("Set"))
+        else if (name.contains("[]")
+                || name.contains("...")
+                || Advisor.isInIgnoreList(name)
+                || (lib.getObjectIfPresent(name) != null && lib.getObjectIfPresent(name)
+                        .isProtocol()) || name.equals("Map") || name.equals("Set"))
             return true;
         else
             return false;
@@ -145,8 +152,8 @@ public class CMethodHelper {
         } else if (argType.contains("String")) {
             return "toNSString" + "(n" + i + ")";
         } else {
-            return "(" + argType + "*) (((" + COut.packageName + argType + "*) n" + i + ")->fields."
-            + COut.packageName + "NSObject.wrappedObjCObj)";
+            return "(" + argType + "*) (((" + COut.packageName + argType + "*) n" + i
+                    + ")->fields." + COut.packageName + "NSObject.wrappedObjCObj)";
         }
     }
 

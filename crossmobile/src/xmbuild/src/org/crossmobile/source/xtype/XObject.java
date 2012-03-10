@@ -42,6 +42,7 @@ public class XObject {
     private boolean                hasExternallyInjectedCode = false;
     private List<XProperty>        propertyList              = null;
     private List<XInjectedMethod>  externallyInjectedCode    = null;
+    private List<String>           references                = null;
 
     public final static int        RETAIN                    = 0;
     public final static int        RELEASE                   = 1;
@@ -52,9 +53,10 @@ public class XObject {
 
 
     public XObject(String className, List<XMethod> methodList, List<XProperty> propList,
-            List<String> aliases, List<XInjectedMethod> extInjectedMethodList) {
+            List<String> aliases, List<String> refList, List<XInjectedMethod> extInjectedMethodList) {
         this.className = className;
         this.aliasList = aliases;
+        this.references = refList;
         this.propertyList = propList;
         createMethodMap(methodList);
         createPropertyMap(propList);
@@ -160,6 +162,10 @@ public class XObject {
 
     public List<String> getAliasList() {
         return aliasList;
+    }
+
+    public List<String> getReferences() {
+        return references;
     }
 
     public boolean selectorHasInjectedCode(String selName) {

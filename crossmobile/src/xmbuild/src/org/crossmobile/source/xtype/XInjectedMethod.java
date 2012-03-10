@@ -36,7 +36,8 @@ public class XInjectedMethod {
     private String      name;
     private String      value;
     private String      returnType;
-    private List<XCode> code = new ArrayList<XCode>();
+    private List<XCode> code      = new ArrayList<XCode>();
+    private List<XArg>  arguments = new ArrayList<XArg>();
 
 
     public void setName(String name) {
@@ -49,6 +50,10 @@ public class XInjectedMethod {
 
     public void setReturnType(String returnType) {
         this.returnType = returnType;
+    }
+
+    public void setArguments(List<XArg> args) {
+        this.arguments = args;
     }
 
     public String getName() {
@@ -64,8 +69,7 @@ public class XInjectedMethod {
     }
 
     public List<XArg> getArguments() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.arguments;
     }
 
     public void addCode(String injectedCode, String language, String mode) {

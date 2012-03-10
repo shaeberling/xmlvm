@@ -19,7 +19,9 @@ package org.crossmobile.source.out;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CConstructor;
@@ -37,6 +39,7 @@ import org.crossmobile.source.out.cutils.ObjCSelectorUtil;
 import org.crossmobile.source.utils.FileUtils;
 import org.crossmobile.source.utils.WriteCallBack;
 import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XInjectedMethod;
 
 public class JavaOut implements Generator {
@@ -96,6 +99,17 @@ public class JavaOut implements Generator {
         
         out.append(objectprefix);
 
+        List<String> references = null;
+        if((references = AdvisorWrapper.getReferencesForObject(object.name)) != null){
+            out.append("(references={");
+            for(int i=0; i<references.size(); i++){
+                out.append(references.get(i) + ".class");
+                if(i < references.size()-1)
+                    out.append(",");
+            }
+            out.append("})\n");
+        }
+        
         String type = "class";
         if (object.isProtocol()) {
             type = object.hasOptionalMethod() ? "abstract class" : "interface";
@@ -165,13 +179,21 @@ public class JavaOut implements Generator {
         if (!object.isProtocol()) {
             out.append("\n\t/*\n\t * Constructors\n\t */\n");
             boolean has_default_constructor = false;
+            boolean hasSuperclass = object.getSuperclass() != null ? true : false;
+            if (hasSuperclass) {
+                // SuperClass Constructors
+                Map<String, Boolean> subclassArgTypes = new HashMap<String, Boolean>();
+                for (CConstructor c:  object.getConstructors()) 
+                    subclassArgTypes.put(c.getCommaSeparatedArgumentTypes(), true);
+                parseSuperClassConstructor(library.getObjectIfPresent(object.getSuperclass().getProcessedName()), object, library, subclassArgTypes, out);
+            }            
             for (CConstructor c : object.getConstructors()) {
                 if (c.getArguments().isEmpty())
                     has_default_constructor = true;
                 parseConstructor(object, c, out);
             }
             if (!has_default_constructor)
-                parseDefaultConstructor(object.getName(), out);
+                parseDefaultConstructor(object.getName(), hasSuperclass, out);
         }
 
         if (object.hasProperties()) {
@@ -198,9 +220,71 @@ public class JavaOut implements Generator {
         out.append("}\n");
     }
 
+    /**
+     * Every subclass needs to have a constructor that corresponds to the
+     * constructor in all of the superclass along the inheritance tree. This
+     * method is used to emit constructors in subclasses corresponding to
+     * constructors in superclass. The method is called recursively to add all
+     * the constructors to a subclass along its inheritance tree.
+     * 
+     * @param superclass
+     *            - CObject instance of the superclass of the current object
+     * @param object
+     *            - The current object being parsed
+     * @param lib
+     *            - The CLibrary instance
+     * @param subclassArgTypes
+     *            - Map containing the comma separated argument types for all
+     *            the constructors that are present in the current object. This
+     *            is required to prevent generation of constructors
+     *            corresponding to superclass where the signatures conflict with
+     *            that in subclass
+     * @param out
+     * @throws IOException
+     */
+    private void parseSuperClassConstructor(CObject superclass, CObject object, CLibrary lib, Map<String, Boolean> subclassArgTypes, Writer out) throws IOException {        
+        for (CConstructor c : superclass.getConstructors()) {
+            if (!c.getArguments().isEmpty()) {
+                List<CArgument> args = c.getArguments();
+                int size = args.size();
+                
+                if(subclassArgTypes.containsKey(c.getCommaSeparatedArgumentTypes()))
+                    continue;               
+                out.append("\tpublic ").append(object.name + "(");
+                parseArgumentList(c.getArguments(), superclass, c.getEnum(), out);
+                out.append(") {\n\t\t").append("super(");
+                for (int i = 0; i < args.size(); i++) {
+                    out.append(args.get(i).name);
+                    if (i < size - 1)
+                        out.append(", ");
+                }
+                CEnum overloadenum = c.getEnum();
+                if (overloadenum != null) {
+                    if (!args.isEmpty())
+                        out.append(", ");
+                    out.append(overloadenum.name.toLowerCase());
+                }
+                out.append(");\n\t}\n");
+                subclassArgTypes.put(c.getCommaSeparatedArgumentTypes().toString(), true);
+            }
+        }
+        if(superclass.getSuperclass()!=null)
+            parseSuperClassConstructor(lib.getObjectIfPresent(superclass.getSuperclass().getProcessedName()), object, lib, subclassArgTypes, out);
+    }
+    
     private void parseInjectedMethods(CObject object, XInjectedMethod im, Writer out) throws IOException {
         out.append("\t");
-        out.append(im.getModifier() +" "+im.getReturnType() +" "+ im.getName()+"()");
+        
+        out.append(im.getModifier() +" "+im.getReturnType() +" "+ im.getName()+"(");
+        List<XArg> arguments = im.getArguments();
+        if(arguments!=null) {
+            for(int i=0; i<arguments.size(); i++) {
+                out.append(arguments.get(i).getType() + " arg" +i);
+                if (i < arguments.size() - 1)
+                    out.append(", ");
+            }
+        }
+        out.append(")");
         out.append(DUMMYBODY);        
     }
 
@@ -274,10 +358,13 @@ public class JavaOut implements Generator {
         out.append(") {}\n");
     }
 
-    private void parseDefaultConstructor(String name, Writer out) throws IOException {
+    private void parseDefaultConstructor(String name, boolean hasSuperclass, Writer out) throws IOException {
         out.append(constructorprefix);
         out.append("\n\t/** Default constructor */\n\t");
-        out.append(name).append("() {}\n");
+        out.append("public ").append(name).append("() {");
+        if (hasSuperclass)
+            out.append("\n\t\tsuper();\n\t");
+        out.append("}\n");
     }
 
     private static String getParseType(CType type, boolean originalName) {

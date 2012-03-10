@@ -391,20 +391,17 @@
         <type name="Map" map=""/>
     </returntypes>
     
-     <!-- Mapping for internal classes -->
     <class name="UIView">
         <alias name ="UILayoutContainerView"/>
         
         <selector name="-initWithFrame:" autoReleasePool="true"/>
         
         <selector name="-removeFromSuperview">      
-            <injected-method>
-                <code language="c" mode="replace">
-                    <![CDATA[ XMLVM_VAR_THIZ;
-                     XMLVMUtil_ArrayList_remove(((org_xmlvm_ios_UIView*)(xmlvm_get_associated_c_object([thiz superview])))->fields.org_xmlvm_ios_UIView.acc_array_UIView, me);
-                     [thiz removeFromSuperView]; ]]>
-                </code>
-            </injected-method>
+            <code language="c" mode="replace">
+                <![CDATA[ XMLVM_VAR_THIZ;
+                 XMLVMUtil_ArrayList_remove(((org_xmlvm_ios_UIView*)(xmlvm_get_associated_c_object([thiz superview])))->fields.org_xmlvm_ios_UIView.acc_array_UIView, me);
+                 [thiz removeFromSuperView]; ]]>
+            </code>
         </selector>
         
         <selector name="-addSubview:">
@@ -413,14 +410,14 @@
     </class>
     
     <class name="NSObject">
+        <reference class="NSString"/>
+        <reference class="Class"/>
         <selector name="-finalize">
-            <injected-method>
-                <code language="c" mode="replace">
-                    <![CDATA[ XMLVM_VAR_THIZ;
-                              [thiz removeExtraMembers];
-                              [thiz release];]]>
-                </code>
-            </injected-method>
+            <code language="c" mode="replace">
+                <![CDATA[ XMLVM_VAR_THIZ;
+                 [thiz removeExtraMembers];
+                 [thiz release];]]>
+            </code>
         </selector>
     </class>
     
@@ -438,6 +435,7 @@
     
     <class name="UIColor">
         <alias name ="UIDeviceRGBColor"/>
+        <alias name ="UICachedDeviceWhiteColor"/>
     </class>
     
     <class name="UIButton">
@@ -473,6 +471,73 @@
     <class name="UITabBarController">
         <property name="viewControllers" type="List&lt;UIViewController&gt;" retain="true"/>
         <property name="delegate" type="UITabBarControllerDelegate" delegate="true" replace="true"/>
+    </class> 
+    
+    <class name="UIApplication">
+        <!-- Currently generating code for UIApplication.main() using the below -->
+        <injected-method name="main" modifier="public static">
+            <signature>
+                <arg position="0" type="String[]"/>
+                <arg position="1" type="Class&lt;? extends UIApplication&gt;"/>
+                <arg position="2" type="Class&lt;? extends UIApplicationDelegate&gt;"/>
+                <return type="void"/>
+            </signature>
+            <code language="c" mode="replace">
+                <![CDATA[ setAppToRun((*(JAVA_OBJECT (*)(JAVA_OBJECT)) ((java_lang_Class*) n3)->tib->vtable[XMLVM_VTABLE_IDX_java_lang_Class_newInstance__])(n3));
+                 NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+                 UIApplicationMain(0 /*argc*/, nil /*argv*/, @"UIApplication", @"UIApplicationDelegateWrapper");
+                 [pool release]; ]]>
+            </code>
+        </injected-method>
+    </class>
+    
+    <class name="CALayer">
+        <reference class="NSArray"/>
+    </class>
+    
+    <class name="NSData">
+        <reference class="NSString"/>
+    </class>
+    
+    <class name="NSURL">
+        <reference class="NSString"/>
+    </class>
+    
+    <class name="UIAlertView">
+        <reference class="UILabel"/>
+    </class>
+    
+    <class name="UIImage">
+        <reference class="NSString"/>
+    </class>
+    
+    <class name="UIResponder">
+        <reference class="UITouch"/>
+    </class>
+    
+    <class name="UIViewController">
+        <reference class="NSString"/>
+    </class>
+    
+    <class name="CGRect">
+        <reference class="CGPoint"/>
+        <reference class="CGSize"/>
+    </class>
+    
+    <class name="UITabBarControllerDelegate">
+        <reference class="NSArray"/>
+    </class>
+    
+    <class name="UITabBarDelegate">
+        <reference class="NSArray"/>
+    </class>
+    
+    <class name="UIApplicationDelegate">
+        <reference class="NSDictionary"/>
+    </class>
+    
+    <class name="CAAction">
+        <reference class="NSDictionary"/>
     </class> 
 </advisor>
 

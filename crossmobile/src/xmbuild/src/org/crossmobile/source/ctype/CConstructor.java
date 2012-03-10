@@ -53,4 +53,16 @@ public class CConstructor extends CSelector {
             }
         }
     }
+    
+    public String getCommaSeparatedArgumentTypes() {
+        StringBuilder argTypes = new StringBuilder();
+        List<CArgument> args = getArguments();        
+        for (int i = 0; i < args.size(); i++) {
+            argTypes.append(args.get(i).getType().toString());
+            if (i < args.size() - 1)
+                argTypes.append(",");
+        } 
+        return argTypes.toString();
+    }
+
 }

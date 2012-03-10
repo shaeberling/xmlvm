@@ -99,8 +99,12 @@ public class CObjectOut {
 
             out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
             out.append(" NSObject* wrappedObjCObj){" + Constants.NT);
-            out.append("" + COut.packageName + "NSObject_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);"
-                    + Constants.N);
+            out.append("" + COut.packageName);
+            if (object.getSuperclass() != null)
+                out.append(object.getSuperclass().getProcessedName());
+            else
+                out.append("NSObject");
+            out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);" + Constants.N);
 
             if (AdvisorWrapper.needsAccumulator(object.name)) {
                 out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"

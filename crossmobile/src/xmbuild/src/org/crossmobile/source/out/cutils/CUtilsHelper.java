@@ -60,32 +60,13 @@ public class CUtilsHelper {
     private static String getWrapperComment(int type, String methodName,
             boolean constructorOverloaded, String enumName) {
         StringBuilder str = new StringBuilder();
-        String argType = null;
 
         if (type == METHOD)
             str.append(Constants.BEGIN_WRAPPER + "[" + objectClassName + "_" + methodName + "__");
         if (type == CONSTRUCTOR)
             str.append(Constants.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
-        for (CArgument arg : arguments) {
-            argType = arg.getType().toString();
-            if (argType.equals("Object"))
-                str.append("_java_lang_Object");
-            else if (Advisor.isNativeType(argType))
-                str.append("_" + argType);
-            else if (argType.equals("String"))
-                str.append("_java_lang_String");
-            else if (CStruct.isStruct(argType))
-                str.append("_" + COut.packageName + argType);
-            else if (argType.equals("List"))
-                str.append("_java_util_List");
-            else if (argType.equals("Map"))
-                str.append("_java_util_Map");
-            else if (argType.equals("Set"))
-                str.append("_java_util_Set");
-            else if (!argType.contains("Reference") || !argType.contains("[]") || !argType.contains("..."))
-                str.append("_" + COut.packageName + argType);
-       
-        }
+        for (CArgument arg : arguments)
+            str.append(getWrapperCommentArgument(arg.getType().toString()));
 
         if (constructorOverloaded)
             str.append("_" + objectClassName + "_" + enumName);
@@ -136,5 +117,34 @@ public class CUtilsHelper {
         objectClassName = objClassName;
         return getWrapperComment(CONSTRUCTOR, null, constructorOverloaded, enumName);
 
+    }
+
+    public static String getWrapperCommentArgument(String argType) {
+        // May be move this mapping to Advisor later!
+        if (argType.equals("Object"))
+            return "_java_lang_Object";
+        else if (Advisor.isNativeType(argType))
+            return "_" + argType;
+        else if (argType.equals("String"))
+            return "_java_lang_String";
+        else if (argType.contains("String") && argType.contains("[][]"))
+            return "_java_lang_String_2ARRAY";
+        else if (argType.contains("String") && argType.contains("[]"))
+            return "_java_lang_String_1ARRAY";
+        else if (CStruct.isStruct(argType))
+            return "_" + COut.packageName + argType;
+        else if (argType.equals("List"))
+            return "_java_util_List";
+        else if (argType.equals("Map"))
+            return "_java_util_Map";
+        else if (argType.equals("Set"))
+            return "_java_util_Set";
+        else if (argType.matches("Class<.*>"))
+            return "_java_lang_Class";
+        else if (!argType.contains("Reference") || !argType.contains("[]")
+                || !argType.contains("..."))
+            return "_" + COut.packageName + argType;
+        else
+            return null;
     }
 }

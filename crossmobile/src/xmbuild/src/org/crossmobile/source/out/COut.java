@@ -23,7 +23,6 @@ package org.crossmobile.source.out;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Collection;
 import java.util.List;
 
 import org.crossmobile.source.ctype.CLibrary;
@@ -31,9 +30,11 @@ import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.out.cutils.CObjectOut;
 import org.crossmobile.source.out.cutils.CStructOut;
+import org.crossmobile.source.out.cutils.CUtilsHelper;
 import org.crossmobile.source.utils.FileUtils;
 import org.crossmobile.source.utils.WriteCallBack;
 import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XInjectedMethod;
 import org.crossmobile.source.xtype.XObject;
 import org.crossmobile.source.xtype.XProperty;
@@ -67,14 +68,7 @@ public class COut implements Generator {
         File out = new File(outdir);
         FileUtils.delete(out);
 
-        CObject o = null;
-        int i = 0;
-
-        Collection<CObject> col = (Collection<CObject>) lib.getObjects();
-        Object[] objs = col.toArray();
-
-        for (i = 0; i < objs.length; i++) {
-            o = (CObject) objs[i];
+        for (CObject o : lib.getObjects()) {
             final CObject fo = o;
 
             if (!Advisor.isInIgnoreList(fo.name)) {
@@ -196,9 +190,15 @@ public class COut implements Generator {
     private static void emitInjectedCode(CObject object, Writer out) throws IOException {
         List<XInjectedMethod> iMethods = AdvisorWrapper.getExternallyInjectedCode(object.name);
         for (XInjectedMethod im : iMethods) {
-            // TODO Consider cases where injected method has arguments
             out.append(Constants.BEGIN_WRAPPER + "[" + object.getcClassName() + "_" + im.getName()
-                    + "__]");
+                    + "__");
+            List<XArg> arguments = im.getArguments();
+            if (arguments != null) {
+                for (XArg arg : arguments) {
+                    out.append(CUtilsHelper.getWrapperCommentArgument(arg.getType()));
+                }
+            }
+            out.append("]");
             out.append(im.getInjectedCode().get(0).getCode() + Constants.N);
             out.append(Constants.END_WRAPPER);
         }

@@ -155,4 +155,21 @@ public class AdvisorWrapper {
     public static List<XInjectedMethod> getExternallyInjectedCode(String objectName) {
         return getSpecialClass(objectName).getExternallyInjectedMethods();
     }
+
+    /**
+     * There are some referenced classes that need to be specified via
+     * XMLVMSkeletonOnly annotation's 'references' argument. This list is
+     * specified using the advisor at the class level.
+     * 
+     * @param name
+     *            - Name of the object
+     * @return - List of classes being referenced if they exist; null otherwise.
+     */
+    public static List<String> getReferencesForObject(String name) {
+        XObject obj = null;
+        if ((obj = getSpecialClass(name)) != null) {
+            return obj.getReferences();
+        }
+        return null;
+    }
 }

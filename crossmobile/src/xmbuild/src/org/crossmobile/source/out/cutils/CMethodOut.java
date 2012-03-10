@@ -46,7 +46,7 @@ public class CMethodOut {
     public CMethodOut(Writer out, CLibrary lib, CObject object) {
         this.out = out;
         this.object = object;
-        this.methodHelper = new CMethodHelper(object.name, object.getcClassName(), lib);
+        this.methodHelper = new CMethodHelper(object.name, lib);
     }
 
     /**
@@ -64,14 +64,16 @@ public class CMethodOut {
             String methodCall = null;
             String returnString = "";
             CAnyMethodOut methodType = null;
+            StringBuilder classInitializer = new StringBuilder("");
 
-            String initial = null;
-            String replaceable = null;
-            String end = null;
+            String initialInjectedCode = null;
+            String replaceableCode = null;
+            String finalInjectedCode = null;
 
             String returnType = method.getReturnType().toString();
             if (!returnType.equals("void")) {
-                returnString = methodHelper.getReturnString(returnType);
+                returnString = methodHelper.getReturnString(returnType, classInitializer);
+
                 if (returnString == null)
                     notImplemented = true;
             }
@@ -98,11 +100,11 @@ public class CMethodOut {
                 int index = 0;
                 while (index < iMethods.getInjectedCode().size()) {
                     if (iMethods.getInjectedCode().get(index).getMode().equals("before"))
-                        initial = iMethods.getInjectedCode().get(index).getCode();
+                        initialInjectedCode = iMethods.getInjectedCode().get(index).getCode();
                     else if (iMethods.getInjectedCode().get(index).getMode().equals("after"))
-                        end = iMethods.getInjectedCode().get(index).getCode();
+                        finalInjectedCode = iMethods.getInjectedCode().get(index).getCode();
                     else if (iMethods.getInjectedCode().get(index).getMode().equals("replace"))
-                        replaceable = iMethods.getInjectedCode().get(index).getCode();
+                        replaceableCode = iMethods.getInjectedCode().get(index).getCode();
                     index++;
                 }
 
@@ -113,20 +115,22 @@ public class CMethodOut {
 
             if (notImplemented == true)
                 out.append(Constants.T + Constants.NOT_IMPLEMENTED);
-            else if (replaceable != null)
-                out.append(replaceable);
+            else if (replaceableCode != null)
+                out.append(replaceableCode);
             else {
-                if (initial != null)
-                    out.append(initial);
+                if (initialInjectedCode != null)
+                    out.append(initialInjectedCode);
                 if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
-                    out.append(Constants.AUTORELEASEPOOL_ALLOC + methodCall
-                            + getArrayConversionString(returnType)
-                            + Constants.AUTORELEASEPOOL_RELEASE + Constants.T + returnString);
+                    out.append(Constants.AUTORELEASEPOOL_ALLOC + methodCall).append(
+                            classInitializer).append(
+                            getArrayConversionString(returnType)
+                                    + Constants.AUTORELEASEPOOL_RELEASE + Constants.T
+                                    + returnString);
                 else
-                    out.append(methodCall + getArrayConversionString(returnType) + Constants.T
-                            + returnString);
-                if (end != null)
-                    out.append(end);
+                    out.append(methodCall).append(classInitializer).append(
+                            getArrayConversionString(returnType) + Constants.T + returnString);
+                if (finalInjectedCode != null)
+                    out.append(finalInjectedCode);
             }
             out.append(Constants.N + Constants.END_WRAPPER + Constants.N);
         }

@@ -52,12 +52,14 @@ public class CConstructorOut {
     private Writer        out          = null;
     private CObject       object       = null;
     private CMethodHelper methodHelper = null;
+    private CLibrary      library      = null;
 
 
     public CConstructorOut(Writer out, CLibrary lib, CObject object) {
         this.out = out;
         this.object = object;
-        this.methodHelper = new CMethodHelper(this.object.name, this.object.getcClassName(), lib);
+        this.library = lib;
+        this.methodHelper = new CMethodHelper(this.object.name, lib);
     }
 
     /**
@@ -68,13 +70,67 @@ public class CConstructorOut {
      * @throws IOException
      */
     public void emitConstructors(boolean isStruct) throws IOException {
+        emitConstructors(isStruct, object, null);
+        Map<String, Boolean> subclassArgTypes = new HashMap<String, Boolean>();
+        for (CConstructor c : object.getConstructors())
+            subclassArgTypes.put(c.getCommaSeparatedArgumentTypes(), true);
+        emitSuperClassConstructor(isStruct, object, subclassArgTypes);
+    }
+
+    /**
+     * Used to emit constructors in subclasses corresponding to constructors in
+     * superclass. The method is called recursively to add all the constructors
+     * to a subclass along its inheritance tree.
+     * 
+     * @param isStruct
+     *            - Indicates if the constructor is generated for structs
+     * @param obj
+     *            - the object for which the constructors are currently looked
+     *            for
+     * @param subclassArgTypes
+     *            - Map containing the comma separated argument types for all
+     *            the constructors that are present in the current object. This
+     *            is required to prevent generation of constructors
+     *            corresponding to superclass where the signatures conflict with
+     *            that in subclass
+     * @throws IOException
+     */
+    private void emitSuperClassConstructor(boolean isStruct, CObject currentObj,
+            Map<String, Boolean> subclassArgTypes) throws IOException {
+        if (currentObj.getSuperclass() != null) {
+            CObject superclass = library.getObjectIfPresent(currentObj.getSuperclass()
+                    .getProcessedName());
+
+            emitConstructors(isStruct, superclass, subclassArgTypes);
+            if (superclass.getSuperclass() != null) {
+                for (CConstructor c : superclass.getConstructors())
+                    subclassArgTypes.put(c.getCommaSeparatedArgumentTypes(), true);
+                emitSuperClassConstructor(isStruct, superclass, subclassArgTypes);
+            }
+        }
+    }
+
+    /**
+     * Used to generate code for constructors
+     * 
+     * @param isStruct
+     *            - Indicates if the constructor is generated for structs
+     * @throws IOException
+     */
+    private void emitConstructors(boolean isStruct, CObject currentObj,
+            Map<String, Boolean> subclassArgType) throws IOException {
 
         boolean has_default_constructor = false;
         List<CArgument> arguments = null;
         CEnum cEnum = null;
         Map<String, List<String>> namePartsMap = new HashMap<String, List<String>>();
 
-        for (CConstructor con : object.getConstructors()) {
+        for (CConstructor con : currentObj.getConstructors()) {
+
+            if (subclassArgType != null
+                    && subclassArgType.containsKey(con.getCommaSeparatedArgumentTypes()))
+                continue;
+
             arguments = con.getArguments();
 
             cEnum = con.getEnum();
@@ -104,7 +160,7 @@ public class CConstructorOut {
         }
 
         if (!has_default_constructor)
-            appendDefaultConstructor();
+            emitDefaultConstructor(isStruct);
     }
 
     /**
@@ -243,8 +299,7 @@ public class CConstructorOut {
             methodCode.append(beginListConversion).append(objCCall).append(
                     releaseList + Constants.N);
             out.append(methodCode);
-            out.append(Constants.T + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(me, objCObj);"
-                    + Constants.N);
+            emitCallToInternalConstructor();
         } else {
             out.append(objCCall);
         }
@@ -256,9 +311,19 @@ public class CConstructorOut {
      * 
      * @throws IOException
      */
-    private void appendDefaultConstructor() throws IOException {
+    private void emitDefaultConstructor(boolean isStruct) throws IOException {
         out.append(Constants.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
         out.append("]" + Constants.N);
+        if (!isStruct) {
+            out.append(Constants.T + object.name).append("* objCObj = [[").append(object.name)
+                    .append(" alloc ] init];").append(Constants.N);
+            emitCallToInternalConstructor();
+        }
         out.append(Constants.END_WRAPPER + Constants.N);
+    }
+
+    private void emitCallToInternalConstructor() throws IOException {
+        out.append(Constants.T + object.getcClassName()).append(
+                "_INTERNAL_CONSTRUCTOR(me, objCObj);").append(Constants.N);
     }
 }

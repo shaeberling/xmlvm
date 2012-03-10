@@ -92,6 +92,14 @@ public class CLibrary implements FieldHolder, Serializable {
         objects.put(name, obj);
         return obj;
     }
+    
+    public CObject getObjectIfPresent(String name){
+        name = Oracle.nameBeautifier(new CType(name).getProcessedName());
+        CObject obj = objects.get(name);
+        if(obj!=null)
+            return obj;
+        return null;
+    }
 
     public Set<CEnum> getEnums() {
         return enums;

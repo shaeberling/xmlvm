@@ -84,6 +84,7 @@ public class Advisor extends DefaultHandler {
     private String mode;
     private StringBuilder injectedCode;
     private boolean currentElement = false;
+    private List<String> referenceList;
 
     //
     private static String lastfile;
@@ -162,7 +163,6 @@ public class Advisor extends DefaultHandler {
             className = at.getValue("name");
             propertyList = new ArrayList<XProperty>();
             methodList = new ArrayList<XMethod>();
-            aliasList = new ArrayList<String>();
             injectedMethodList = new ArrayList<XInjectedMethod>();
         } else if(qName.equals("selector")){
             requireAutoReleasePool = at.getValue("autoReleasePool");
@@ -177,6 +177,8 @@ public class Advisor extends DefaultHandler {
             else if(at.getValue("release")!=null && at.getValue("release").equals("true"))
                 flag = org.crossmobile.source.xtype.XObject.RELEASE;
             xarg = new XArg(Integer.parseInt(at.getValue("position")), at.getValue("type"), flag);
+            if(argList == null)
+                argList = new ArrayList<XArg>();
             argList.add(xarg);
         } else if(qName.equals("property")){
             int flag = -1;
@@ -186,9 +188,15 @@ public class Advisor extends DefaultHandler {
                 flag = org.crossmobile.source.xtype.XObject.REPLACE;
             property = new XProperty(at.getValue("name"), at.getValue("type"), flag);
             propertyList.add(property);
-        } else if(qName.equals("alias")) {   
+        } else if(qName.equals("alias")) { 
+            if(aliasList == null)
+                aliasList = new ArrayList<String>();
             aliasList.add(at.getValue("name"));
-        } else if(qName.equals("injected-method")){
+        } else if(qName.equals("reference")) {
+            if(referenceList == null)
+                referenceList = new ArrayList<String>();
+            referenceList.add(at.getValue("class"));
+        }else if(qName.equals("injected-method")){
             injMethod = new XInjectedMethod();
             injectedMethodName = at.getValue("name");
             injectedMethodModifier = at.getValue("modifier");
@@ -232,21 +240,26 @@ public class Advisor extends DefaultHandler {
                 xmethod.setInjectedCode(injMethod);
             injMethod = null;
         } else if(qName.equals("class")){
-            xobject = new XObject(className, methodList, propertyList, aliasList, injectedMethodList);
+            xobject = new XObject(className, methodList, propertyList, aliasList, referenceList, injectedMethodList);
             classObject.put(className, xobject);
             methodList = null;
             propertyList = null;
             aliasList = null;
+            referenceList = null;
             injectedMethodList = null;
             injMethod = null;
         } else if(qName.equals("injected-method")){
             injMethod.setReturnType(returnType);
             injMethod.setName(injectedMethodName);
             injMethod.setModifier(injectedMethodModifier);
+            injMethod.setArguments(argList);
             XInjectedMethod im = injMethod;
             if(injectedMethodName!=null)
                 injectedMethodList.add(im);
+            argList = null;
         } else if(qName.equals("code")){
+            if(injMethod == null)
+                injMethod = new XInjectedMethod();
             injMethod.addCode(injectedCode.toString(), language, mode);
             injectedCode = null;
             currentElement = false;
