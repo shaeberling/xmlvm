@@ -66,6 +66,7 @@ public class Advisor extends DefaultHandler {
     
     private String className;
     private String selectorName;
+    private boolean isMandatory = false;
     private XArg xarg;
     private XMethod xmethod;
     private XObject xobject;
@@ -80,6 +81,7 @@ public class Advisor extends DefaultHandler {
     private String injectedMethodName;
     private String injectedMethodModifier;
     private String returnType;
+    private String defaultRetunValue;
     private String language;
     private String mode;
     private StringBuilder injectedCode;
@@ -167,6 +169,7 @@ public class Advisor extends DefaultHandler {
         } else if(qName.equals("selector")){
             requireAutoReleasePool = at.getValue("autoReleasePool");
             selectorName = at.getValue("name");
+            isMandatory = (at.getValue("mandatory")!=null && at.getValue("mandatory").equals("true"))? true : false;
             argList = new ArrayList<XArg>(); 
         } else if(qName.equals("arg")){
             int flag = -1;
@@ -202,6 +205,7 @@ public class Advisor extends DefaultHandler {
             injectedMethodModifier = at.getValue("modifier");
         } else if(qName.equals("return")) {
             returnType = at.getValue("type");
+            defaultRetunValue = at.getValue("default-value");
         } else if(qName.equals("code")){
             injectedCode = new StringBuilder();
             language = at.getValue("language");
@@ -233,9 +237,11 @@ public class Advisor extends DefaultHandler {
             conname = null;
             conids = null;
         } else if(qName.equals("selector")){
-            xmethod = new XMethod(selectorName, argList, requireAutoReleasePool);
+            xmethod = new XMethod(selectorName, argList, requireAutoReleasePool, isMandatory, defaultRetunValue);
             methodList.add(xmethod);
             argList = null;
+            isMandatory = false;
+            defaultRetunValue = null;
             if(injMethod!=null)
                 xmethod.setInjectedCode(injMethod);
             injMethod = null;

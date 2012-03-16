@@ -20,6 +20,7 @@ public abstract class CAnyMethod extends CAny {
     private static final long serialVersionUID = 1L;
 
     private final boolean isAbstract;
+    private boolean isMandatory = false;
 
     public CAnyMethod(String name, boolean isAbstract) {
         super(name);
@@ -28,5 +29,13 @@ public abstract class CAnyMethod extends CAny {
 
     public boolean isAbstract() {
         return isAbstract;
+    }
+    
+    public boolean isMandatory() {
+        return isMandatory;
+    }
+    
+    public void setMandatory(boolean isMandatory) {
+        this.isMandatory = isMandatory;
     }
 }

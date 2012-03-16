@@ -58,6 +58,7 @@ public class JavaOut implements Generator {
     @Override
     public void generate(final CLibrary library) {
         File out = new File(outdir);
+        File protocolOut = new File(outdir+"/adapter");
         FileUtils.delete(out);
 
         for (CObject o : library.getObjects()) {
@@ -66,9 +67,19 @@ public class JavaOut implements Generator {
 
                 @Override
                 public void exec(Writer out) throws IOException {
-                    parseObject(library, fo, out);
+                    parseObject(library, fo, false, out);
                 }
             });
+            
+            if(o.isProtocol()) {
+                FileUtils.putFile(new File(protocolOut, o.getName() + ".java"), new WriteCallBack<Writer>() {
+
+                    @Override
+                    public void exec(Writer out) throws IOException {
+                        parseObject(library, fo, true, out);
+                    }
+                });  
+            }
         }
         FileUtils.putFile(new File(out, "Reference.java"), new WriteCallBack<Writer>() {
 
@@ -92,15 +103,21 @@ public class JavaOut implements Generator {
             });
         }
     }
-
-    private void parseObject(CLibrary library, CObject object, Writer out) throws IOException {
-        out.append("package ").append(library.getPackagename()).append(";\n");
+    
+    private void parseObject(CLibrary library, CObject object, boolean isAdapterImpl, Writer out) throws IOException {
+        if(isAdapterImpl)
+            out.append("package ").append(library.getPackagename()+".adapter").append(";\n");
+        else
+            out.append("package ").append(library.getPackagename()).append(";\n");
         out.append("import java.util.*;\n\n");
         
-        out.append(objectprefix);
+        if(isAdapterImpl)
+            out.append("import " +library.getPackagename()+".*;\n\n");
+        else
+            out.append(objectprefix);
 
         List<String> references = null;
-        if((references = AdvisorWrapper.getReferencesForObject(object.name)) != null){
+        if(!isAdapterImpl && (references = AdvisorWrapper.getReferencesForObject(object.name)) != null){
             out.append("(references={");
             for(int i=0; i<references.size(); i++){
                 out.append(references.get(i) + ".class");
@@ -111,10 +128,15 @@ public class JavaOut implements Generator {
         }
         
         String type = "class";
-        if (object.isProtocol()) {
+        
+        if(isAdapterImpl) {
+            type = object.hasMandatoryMethods() ? "abstract class" : "class";
+        }
+        else if (object.isProtocol()) {
             type = object.hasOptionalMethod() ? "abstract class" : "interface";
             out.append("@org.xmlvm.XMLVMDelegate(protocolType = \"" + object.getName() + "\")\n");
-        }
+        } 
+        
         out.append("public ").append(type).append(" ");
 
         out.append(object.getName());
@@ -129,11 +151,15 @@ public class JavaOut implements Generator {
             out.append(">");
         }
         boolean alreadyDefinedExtensionForInterface = false;
-        if (object.getSuperclass() != null) {
+        if (object.getSuperclass() != null && !isAdapterImpl) {
             out.append(" extends ");
-            parseType(object.getSuperclass(), true, out);
+            parseType(object.getSuperclass(), true, getPackageName(object.getSuperclass(), library), out);
             if (object.isProtocol())
                 alreadyDefinedExtensionForInterface = true;
+        }
+        
+        if(isAdapterImpl) {
+            out.append(" implements ").append(library.getPackagename() +".").append(object.name);
         }
 
 //        if (object.getInterfaces().size() > 0) {
@@ -164,7 +190,7 @@ public class JavaOut implements Generator {
             out.append("\n\t/*\n\t * Variables\n\t */\n");
             for (CArgument var : object.getVariables()) {
                 out.append("\t public ");
-                parseArgument(var, out);
+                parseArgument(var, getPackageName(var.getType(), library), out);
                 out.append(";\n");
             }
         }
@@ -172,8 +198,12 @@ public class JavaOut implements Generator {
         if (object.hasStaticMethods()) {
             out.append("\n\t/*\n\t * Static methods\n\t */\n");
             for (CMethod m : object.getMethods())
-                if (m.isStatic())
-                    parseMethod(object, m, out);
+                if (m.isStatic()) {
+                    if(isAdapterImpl)
+                        parseMethod(object, m, library, true, out);
+                    else
+                        parseMethod(object, m, library, false, out);
+                }
         }
 
         if (!object.isProtocol()) {
@@ -190,7 +220,7 @@ public class JavaOut implements Generator {
             for (CConstructor c : object.getConstructors()) {
                 if (c.getArguments().isEmpty())
                     has_default_constructor = true;
-                parseConstructor(object, c, out);
+                parseConstructor(object, c, library, out);
             }
             if (!has_default_constructor)
                 parseDefaultConstructor(object.getName(), hasSuperclass, out);
@@ -199,15 +229,23 @@ public class JavaOut implements Generator {
         if (object.hasProperties()) {
             out.append("\n\t/*\n\t * Properties\n\t */\n");
             for (CMethod m : object.getMethods())
-                if (m.isProperty())
-                    parseMethod(object, m, out);
+                if (m.isProperty()) {
+                    if(isAdapterImpl)
+                        parseMethod(object, m, library, true, out);
+                    else
+                        parseMethod(object, m, library, false, out);
+                }
         }
 
         if (object.hasInstanceMethods()) {
             out.append("\n\t/*\n\t * Instance methods\n\t */\n");
             for (CMethod m : object.getMethods())
-                if (!m.isStatic() && !m.isProperty())
-                    parseMethod(object, m, out);
+                if (!m.isStatic() && !m.isProperty()) {
+                    if(isAdapterImpl)
+                        parseMethod(object, m, library, true, out);
+                    else
+                        parseMethod(object, m, library, false, out);
+                }
         }
         
         if (AdvisorWrapper.classHasExternallyInjectedCode(object.name)){
@@ -251,7 +289,7 @@ public class JavaOut implements Generator {
                 if(subclassArgTypes.containsKey(c.getCommaSeparatedArgumentTypes()))
                     continue;               
                 out.append("\tpublic ").append(object.name + "(");
-                parseArgumentList(c.getArguments(), superclass, c.getEnum(), out);
+                parseArgumentList(c.getArguments(), superclass, c.getEnum(), lib, out);
                 out.append(") {\n\t\t").append("super(");
                 for (int i = 0; i < args.size(); i++) {
                     out.append(args.get(i).name);
@@ -326,11 +364,11 @@ public class JavaOut implements Generator {
                 + "\", params = {" + sb.toString() + "\n\t})\n";
     }
 
-    private void parseMethod(CObject parent, CMethod m, Writer out) throws IOException {
+    private void parseMethod(CObject parent, CMethod m, CLibrary lib, boolean isAdapterImpl, Writer out) throws IOException {
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
-// TODO Also handle non-protocols requiring wrappers, such as UIView
-        if (parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty()) {
+        // TODO Also handle non-protocols requiring wrappers, such as UIView
+        if (parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl) {
             String selectorDefinition = m.getDefinitions().get(0);
             ObjCSelector selector = ObjCSelectorUtil.toObjCSelector(selectorDefinition);
             if (selector == null) {
@@ -341,20 +379,64 @@ public class JavaOut implements Generator {
         }
         out.append("\tpublic ");
         if (m.isStatic())
-            out.append("static ");
-        else if (m.isAbstract())
+            out.append("static "); 
+        else if ((!isAdapterImpl && m.isAbstract())  
+                || (isAdapterImpl && m.isMandatory()))
             out.append("abstract ");
-        parseType(m.getReturnType(), false, out);
+        parseType(m.getReturnType(), false, getPackageName(m.getReturnType(), lib), out);
         out.append(" ").append(m.getCanonicalName()).append("(");
-        parseArgumentList(m.getArguments(), parent, null, out);
-        out.append(")").append(m.isAbstract() ? ABSTRACTBODY : DUMMYBODY);
+        parseArgumentList(m.getArguments(), parent, null, lib, out);
+        if(isAdapterImpl && !AdvisorWrapper.methodIsMandatoryForObject(m.getSelectorName(), parent.name)) {
+            out.append(")");
+            parseInterfaceImplementationBody(parent, m, out);
+        }
+        else
+            out.append(")").append(m.isAbstract() ? ABSTRACTBODY : DUMMYBODY);
+    }
+    
+    /**
+     * The default return types at present for interface implementations is
+     * null, 0 or false. If the default return types have to be overriden with
+     * some specific values, it needs to be specified via special advice. TODO:
+     * This is not handled yet (via advice)
+     * 
+     * @param returnType
+     *            - return type of the method
+     * @throws IOException
+     * 
+     */
+    private void parseInterfaceImplementationBody(CObject parent, CMethod method, Writer out)
+            throws IOException {
+        CType returnType = method.getReturnType();
+        String defaultReturnValue = null;
+
+        if ((defaultReturnValue = AdvisorWrapper.getDefaultReturnValue(method.getSelectorName(),
+                parent.name)) != null)
+            out.append("{\n\t\treturn ").append(defaultReturnValue).append(";\n\t}");
+        else if (returnType.toString().equals("void"))
+            out.append("{};");
+        else if (returnType.toString().equals("boolean"))
+            out.append("{\n\t\treturn false;\n\t}");
+        else if (returnType.toString().equals("int") || returnType.toString().equals("short")
+                || returnType.toString().equals("long") || returnType.toString().equals("float")
+                || returnType.toString().equals("double"))
+            out.append("{\n\t\treturn 0;\n\t}");
+        else
+            out.append("{\n\t\treturn null;\n\t}");
     }
 
-    private void parseConstructor(CObject parent, CConstructor c, Writer out) throws IOException {
+    private String getPackageName(CType type, CLibrary lib) {
+        CObject obj = lib.getObjectIfPresent(type.toString());
+        if (obj!=null)
+            return obj.isProtocol()? lib.getPackagename() : null;
+        return null;
+    }
+
+    private void parseConstructor(CObject parent, CConstructor c, CLibrary lib, Writer out) throws IOException {
         out.append(constructorprefix);
         parseJavadoc(c.getDefinitions(), out);
         out.append("\tpublic ").append(parent.getName()).append("(");
-        parseArgumentList(c.getArguments(), parent, c.getEnum(), out);
+        parseArgumentList(c.getArguments(), parent, c.getEnum(), lib, out);
         out.append(") {}\n");
     }
 
@@ -371,14 +453,18 @@ public class JavaOut implements Generator {
         return originalName ? type.getProcessedName() : type.toString();
     }
 
-    private void parseType(CType type, boolean originalname, Writer out) throws IOException {
-        out.append(getParseType(type, originalname));
+    private void parseType(CType type, boolean originalname, String packageName, Writer out) throws IOException {
+        if(packageName!=null)
+            out.append(packageName + "." + getParseType(type, originalname));
+        else
+            out.append(getParseType(type, originalname));
+
     }
 
-    private void parseArgumentList(List<CArgument> args, CObject parent, CEnum overloadenum, Writer out) throws IOException {
+    private void parseArgumentList(List<CArgument> args, CObject parent, CEnum overloadenum, CLibrary lib, Writer out) throws IOException {
         int size = args.size();
         for (int i = 0; i < args.size(); i++) {
-            parseArgument(args.get(i), out);
+            parseArgument(args.get(i), getPackageName(args.get(i).getType(), lib), out);
             if (i < size - 1)
                 out.append(", ");
         }
@@ -389,8 +475,8 @@ public class JavaOut implements Generator {
         }
     }
 
-    private void parseArgument(CArgument arg, Writer out) throws IOException {
-        parseType(arg.getType(), false, out);
+    private void parseArgument(CArgument arg, String packageName, Writer out) throws IOException {
+        parseType(arg.getType(), false, packageName, out);
         out.append(" ").append(arg.name);
     }
 

@@ -29,6 +29,7 @@ import org.crossmobile.source.guru.Oracle;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.parser.Stream;
 import org.crossmobile.source.utils.FieldHolder;
+import org.crossmobile.source.xtype.AdvisorWrapper;
 
 public class CObject extends CAny implements FieldHolder, Serializable {
     private static final long serialVersionUID = 1L;
@@ -49,6 +50,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
     private List<CArgument> variables = new ArrayList<CArgument>();
     private boolean isStruct = false;
     private String cClassName = null;
+    private boolean hasMandatoryMethods = false;
 
     CObject(CLibrary library, String name, boolean isProtocol) {
         super(name);
@@ -216,6 +218,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
                 }
                 list.add(m);
             }
+            m.setMandatory(AdvisorWrapper.methodIsMandatoryForObject(m.getSelectorName(), this.name));
         }
 
         // find conflicting methods
@@ -243,6 +246,9 @@ public class CObject extends CAny implements FieldHolder, Serializable {
         // Remove methods which are not valid
         for (CMethod m : toRemove)
             methods.remove(m);
+        
+        if(AdvisorWrapper.objectHasMandatoryMethods(this.name))
+            hasMandatoryMethods  = true;
     }
 
     public CType getSuperclass() {
@@ -337,5 +343,9 @@ public class CObject extends CAny implements FieldHolder, Serializable {
     public void addCArgument(CArgument arg) {
         if (!variables.contains(arg))
             variables.add(arg);
+    }
+    
+    public boolean hasMandatoryMethods(){
+        return hasMandatoryMethods;
     }
 }

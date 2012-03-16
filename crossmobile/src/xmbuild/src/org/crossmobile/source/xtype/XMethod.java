@@ -36,11 +36,17 @@ public class XMethod {
     private boolean         requireAutoReleasePool = false;
     private XInjectedMethod injectedCode           = null;
     private boolean         hasInjectedCode        = false;
+    private boolean         isMandatory            = false;
+
+    private String          defaultRetunValue            = null;
 
 
-    public XMethod(String selectorName, List<XArg> argList, String requireAutoReleasePool) {
+    public XMethod(String selectorName, List<XArg> argList, String requireAutoReleasePool,
+            boolean isMandatory, String defaultRetunValue) {
         this.selectorName = selectorName;
         argumentList = argList;
+        this.isMandatory = isMandatory;
+        this.defaultRetunValue = defaultRetunValue;
         if (requireAutoReleasePool != null)
             this.requireAutoReleasePool = true;
     }
@@ -68,5 +74,21 @@ public class XMethod {
 
     public boolean hasInjectedCode() {
         return hasInjectedCode;
+    }
+
+    public boolean isMandatory() {
+        return isMandatory;
+    }
+
+    public void setMandatory(boolean isMandatory) {
+        this.isMandatory = isMandatory;
+    }
+
+    public String getDefaultRetunValue() {
+        return defaultRetunValue;
+    }
+
+    public void setReturnValue(String defaultRetunValue) {
+        this.defaultRetunValue = defaultRetunValue;
     }
 }

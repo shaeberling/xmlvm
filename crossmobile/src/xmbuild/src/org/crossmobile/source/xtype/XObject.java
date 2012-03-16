@@ -43,6 +43,7 @@ public class XObject {
     private List<XProperty>        propertyList              = null;
     private List<XInjectedMethod>  externallyInjectedCode    = null;
     private List<String>           references                = null;
+    private boolean                hasMandatoryMethods       = false;
 
     public final static int        RETAIN                    = 0;
     public final static int        RELEASE                   = 1;
@@ -102,7 +103,8 @@ public class XObject {
                     else if (a.isReplace())
                         replace = true;
                 }
-
+                if (m.isMandatory())
+                    hasMandatoryMethods = true;
             }
         }
 
@@ -134,6 +136,10 @@ public class XObject {
 
     public Map<String, XProperty> getPropertyMap() {
         return propMap;
+    }
+
+    public boolean hasMandatoryMethods() {
+        return hasMandatoryMethods;
     }
 
     /**
@@ -186,5 +192,31 @@ public class XObject {
 
     public XProperty getPropertyInstance(String propName) {
         return propMap.get(propName);
+    }
+
+    /**
+     * Method to identify if the method is mandatory for the user to implement.
+     * If it is mandatory, then the implementation of the interface leaves the
+     * method as abstract which will force the developer to implement the
+     * method.
+     * 
+     * @param selName
+     * @return
+     */
+    public boolean selectorIsMandatory(String selName) {
+        return methodMap.get(selName) != null ? methodMap.get(selName).isMandatory() : false;
+    }
+
+    /**
+     * The implementation for interfaces are given default return values as 0,
+     * null false. But if this value has to be overridden by any specific
+     * values, then it is specified using special advice.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @return - return value as specified in Advisor.xml, null otherwise
+     */
+    public String getDefaultReturnValueForSelector(String selName) {
+        return methodMap.get(selName) != null ? methodMap.get(selName).getDefaultRetunValue() : null;
     }
 }

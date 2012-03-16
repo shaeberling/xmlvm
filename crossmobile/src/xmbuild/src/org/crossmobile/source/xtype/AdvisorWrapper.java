@@ -40,9 +40,9 @@ public class AdvisorWrapper {
      * @return true if a c-reference is needed for any of the arguments in the
      *         class; false otherwise.
      */
-    public static boolean needsReplacer(String classname) {
-        return (Advisor.getSpecialClasses().containsKey(classname) && Advisor.getSpecialClasses()
-                .get(classname).isReplace());
+    public static boolean needsReplacer(String objectName) {
+        return (Advisor.getSpecialClasses().containsKey(objectName) && Advisor.getSpecialClasses()
+                .get(objectName).isReplace());
     }
 
     /**
@@ -65,9 +65,9 @@ public class AdvisorWrapper {
      *            - name of the class
      * @return true if accumulative array is required; false otherwise.
      */
-    public static boolean needsAccumulator(String classname) {
-        return (Advisor.getSpecialClasses().containsKey(classname) && Advisor.getSpecialClasses()
-                .get(classname).isRetain());
+    public static boolean needsAccumulator(String objectName) {
+        return (Advisor.getSpecialClasses().containsKey(objectName) && Advisor.getSpecialClasses()
+                .get(objectName).isRetain());
 
     }
 
@@ -169,6 +169,63 @@ public class AdvisorWrapper {
         XObject obj = null;
         if ((obj = getSpecialClass(name)) != null) {
             return obj.getReferences();
+        }
+        return null;
+    }
+
+    /**
+     * Some methods of interfaces are mandatory and the developer has to
+     * implement these in the applications. The methods which are mandatory are
+     * left as abstract in the interface implementations (under
+     * org.xmlvm.ios.adapter.*). The advice for this is specified via the
+     * advisor.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @param objectName
+     *            - name of the class
+     * @return - true if the method is mandatory
+     */
+    public static boolean methodIsMandatoryForObject(String selName, String objectName) {
+        XObject obj = null;
+        if ((obj = getSpecialClass(objectName)) != null) {
+            return obj.selectorIsMandatory(selName);
+        }
+        return false;
+    }
+
+    /**
+     * If the class has mandatory methods, then the class should remain
+     * 'abstract'. This method specifies if the class has mandatory methods or
+     * not.
+     * 
+     * @param objectName
+     *            - name of the class
+     * @return - true if the method is mandatory
+     */
+    public static boolean objectHasMandatoryMethods(String objectName) {
+        XObject obj = null;
+        if ((obj = getSpecialClass(objectName)) != null) {
+            return obj.hasMandatoryMethods();
+        }
+        return false;
+    }
+
+    /**
+     * The implementation for interfaces are given default return values as 0,
+     * null false. But if this value has to be overridden by any specific
+     * values, then it is specified using special advice.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @param objectName
+     *            - class name
+     * @return - return the specified return value, null otherwise
+     */
+    public static String getDefaultReturnValue(String selName, String objectName) {
+        XObject obj = null;
+        if ((obj = getSpecialClass(objectName)) != null) {
+            return obj.getDefaultReturnValueForSelector(selName);
         }
         return null;
     }

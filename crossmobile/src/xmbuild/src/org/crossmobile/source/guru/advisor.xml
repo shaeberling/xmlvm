@@ -491,6 +491,16 @@
         </injected-method>
     </class>
     
+    <class name="UIApplicationDelegate">
+        <reference class="NSDictionary"/>
+        <!-- This is just an example for how advice looks mandatory method -->
+        <selector name="-application:didFinishLaunchingWithOptions:" mandatory="true"/>
+        
+        <selector name="-application:handleOpenURL:">
+            <return default-value="true"/>
+        </selector>
+    </class>
+    
     <class name="CALayer">
         <reference class="NSArray"/>
     </class>
@@ -530,10 +540,6 @@
     
     <class name="UITabBarDelegate">
         <reference class="NSArray"/>
-    </class>
-    
-    <class name="UIApplicationDelegate">
-        <reference class="NSDictionary"/>
     </class>
     
     <class name="CAAction">
