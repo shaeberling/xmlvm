@@ -114,25 +114,25 @@ public class CMethodOut {
                 notImplemented = true;
 
             if (notImplemented == true)
-                out.append(Constants.T + Constants.NOT_IMPLEMENTED);
+                out.append(C.T + C.NOT_IMPLEMENTED);
             else if (replaceableCode != null)
                 out.append(replaceableCode);
             else {
                 if (initialInjectedCode != null)
                     out.append(initialInjectedCode);
                 if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
-                    out.append(Constants.AUTORELEASEPOOL_ALLOC + methodCall).append(
+                    out.append(C.AUTORELEASEPOOL_ALLOC + methodCall).append(
                             classInitializer).append(
                             getArrayConversionString(returnType)
-                                    + Constants.AUTORELEASEPOOL_RELEASE + Constants.T
+                                    + C.AUTORELEASEPOOL_RELEASE + C.T
                                     + returnString);
                 else
                     out.append(methodCall).append(classInitializer).append(
-                            getArrayConversionString(returnType) + Constants.T + returnString);
+                            getArrayConversionString(returnType) + C.T + returnString);
                 if (finalInjectedCode != null)
                     out.append(finalInjectedCode);
             }
-            out.append(Constants.N + Constants.END_WRAPPER + Constants.N);
+            out.append(C.N + C.END_WRAPPER + C.N);
         }
     }
 
@@ -148,15 +148,15 @@ public class CMethodOut {
     private String getArrayConversionString(String returnType) {
         if (returnType.equals("List")) {
             StringBuilder convString = new StringBuilder();
-            convString.append(Constants.NT + "JAVA_OBJECT jvc = XMLVMUtil_NEW_ArrayList();");
-            convString.append(Constants.NT + "int i = 0;");
-            convString.append(Constants.NT + "for (i = 0; i < [objCObj count]; i++) {");
-            convString.append(Constants.NTT + "NSObject* c = [objCObj objectAtIndex:i];");
-            convString.append(Constants.NTT + "JAVA_OBJECT jc = xmlvm_get_associated_c_object(c);");
-            convString.append(Constants.NTT + "if (jc == JAVA_NULL) {");
-            convString.append(Constants.NTTT + "XMLVM_INTERNAL_ERROR();" + Constants.NTT + "}");
-            convString.append(Constants.NTT + "XMLVMUtil_ArrayList_add(jvc, jc);" + Constants.NT
-                    + "}" + Constants.N);
+            convString.append(C.NT + "JAVA_OBJECT jvc = XMLVMUtil_NEW_ArrayList();");
+            convString.append(C.NT + "int i = 0;");
+            convString.append(C.NT + "for (i = 0; i < [objCObj count]; i++) {");
+            convString.append(C.NTT + "NSObject* c = [objCObj objectAtIndex:i];");
+            convString.append(C.NTT + "JAVA_OBJECT jc = xmlvm_get_associated_c_object(c);");
+            convString.append(C.NTT + "if (jc == JAVA_NULL) {");
+            convString.append(C.NTTT + "XMLVM_INTERNAL_ERROR();" + C.NTT + "}");
+            convString.append(C.NTT + "XMLVMUtil_ArrayList_add(jvc, jc);" + C.NT
+                    + "}" + C.N);
             return convString.toString();
         } else
             return "";

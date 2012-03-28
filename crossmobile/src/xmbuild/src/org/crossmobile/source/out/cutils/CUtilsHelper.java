@@ -62,15 +62,15 @@ public class CUtilsHelper {
         StringBuilder str = new StringBuilder();
 
         if (type == METHOD)
-            str.append(Constants.BEGIN_WRAPPER + "[" + objectClassName + "_" + methodName + "__");
+            str.append(C.BEGIN_WRAPPER + "[" + objectClassName + "_" + methodName + "__");
         if (type == CONSTRUCTOR)
-            str.append(Constants.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
+            str.append(C.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
         for (CArgument arg : arguments)
             str.append(getWrapperCommentArgument(arg.getType().toString()));
 
         if (constructorOverloaded)
             str.append("_" + objectClassName + "_" + enumName);
-        str.append("]" + Constants.N);
+        str.append("]" + C.N);
 
         return str.toString();
 

@@ -70,10 +70,10 @@ public class CMethodHelper {
                 return "return jvc;";
             else {
                 if (!retType.equals("Class"))
-                    classInitializer.append(Constants.T + "if (!__TIB_"
+                    classInitializer.append(C.T + "if (!__TIB_"
                             + lib.getPackagename().replace(".", "_") + "_" + retType
                             + ".classInitialized) __INIT_" + lib.getPackagename().replace(".", "_")
-                            + "_" + retType + "();" + Constants.N);
+                            + "_" + retType + "();" + C.N);
                 return "return xmlvm_get_associated_c_object (objCObj);";
             }
         } else
@@ -192,7 +192,7 @@ public class CMethodHelper {
 
         if (!returnType.equals("void")) {
             if ((mappedType = getMappedDataType(returnType)) != null)
-                returnVariable.append(Constants.NT + mappedType);
+                returnVariable.append(C.NT + mappedType);
             else
                 return null;
 
@@ -207,7 +207,7 @@ public class CMethodHelper {
     }
 
     public static String getCodeToReleaseList(int i) {
-        return Constants.NT + "[ObjCArr" + i + " release];" + Constants.N;
+        return C.NT + "[ObjCArr" + i + " release];" + C.N;
     }
 
     /**
@@ -222,15 +222,15 @@ public class CMethodHelper {
         StringBuilder listConverionCode = new StringBuilder();
         listConverionCode
                 .append("NSMutableArray* ObjCArr" + i + "= [[NSMutableArray alloc] init];");
-        listConverionCode.append(Constants.NT + "int size" + i + " = XMLVMUtil_ArrayList_size(n"
+        listConverionCode.append(C.NT + "int size" + i + " = XMLVMUtil_ArrayList_size(n"
                 + i + ");");
-        listConverionCode.append(Constants.NT + "for (int i = 0; i < size" + i + "; i++) {");
-        listConverionCode.append(Constants.NTT + COut.packageName
+        listConverionCode.append(C.NT + "for (int i = 0; i < size" + i + "; i++) {");
+        listConverionCode.append(C.NTT + COut.packageName
                 + "NSObject* jobj = XMLVMUtil_ArrayList_get(n" + i + ", i);");
-        listConverionCode.append(Constants.NTT + "NSObject* ObjCObj = jobj->fields."
+        listConverionCode.append(C.NTT + "NSObject* ObjCObj = jobj->fields."
                 + COut.packageName + "NSObject.wrappedObjCObj;");
-        listConverionCode.append(Constants.NTT + "[ObjCArr" + i + " addObject: ObjCObj];"
-                + Constants.NT + "}" + Constants.NT);
+        listConverionCode.append(C.NTT + "[ObjCArr" + i + " addObject: ObjCObj];"
+                + C.NT + "}" + C.NT);
         return listConverionCode.toString();
     }
 }

@@ -75,7 +75,7 @@ public class ObjCMethodOut extends CAnyMethodOut {
         }
 
         if (!method.isStatic())
-            methodCode.append(Constants.XMLVM_VAR_THIZ + Constants.NT);
+            methodCode.append(C.XMLVM_VAR_THIZ + C.NT);
 
         if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType().toString())) != null)
             objCCall.append(returnVariableStr);
@@ -113,7 +113,7 @@ public class ObjCMethodOut extends CAnyMethodOut {
 
         objCCall.append("];");
         methodCode.append(beginListConversion).append(objCCall).append(accString).append(
-                releaseList + Constants.N);
+                releaseList + C.N);
         return methodCode.toString();
     }
 }

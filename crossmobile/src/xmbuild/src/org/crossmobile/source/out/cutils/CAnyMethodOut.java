@@ -80,7 +80,7 @@ public abstract class CAnyMethodOut {
 
     protected String getAccumulativeCode(int position, String type) {
         StringBuilder accString = new StringBuilder();
-        accString.append(Constants.NT + "XMLVMUtil_ArrayList_add(jthiz->fields."
+        accString.append(C.NT + "XMLVMUtil_ArrayList_add(jthiz->fields."
                 + object.getcClassName() + ".acc_array_" + object.name + ", n" + position + ");");
         return accString.toString();
     }

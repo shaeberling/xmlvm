@@ -75,7 +75,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
 
         StringBuilder methodCall = new StringBuilder();
         String returnVariableStr = "";
-        methodCall.append(Constants.XMLVM_VAR_THIZ);
+        methodCall.append(C.XMLVM_VAR_THIZ);
 
         if (((returnVariableStr = CMethodHelper
                 .getReturnVariable(method.getReturnType().toString())) != null)
@@ -111,7 +111,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
                 accString = injectAccumulatorReplacerCode(method.name);
             }
 
-            methodCode.append(Constants.XMLVM_VAR_THIZ + Constants.N);
+            methodCode.append(C.XMLVM_VAR_THIZ + C.N);
 
             if (method.derivesFromObjC())
                 objCCall.append("[thiz " + method.name + ":");
@@ -134,7 +134,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
 
             objCCall.append("];");
             methodCode.append(beginListConversion).append(objCCall).append(accString).append(
-                    releaseList + Constants.N);
+                    releaseList + C.N);
 
         } catch (Exception e) {
             methodCode.delete(0, methodCode.length());
@@ -156,7 +156,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             if (prop.isRetain())
                 accString = getAccumulativeCode(1, prop.getType());
             else if (prop.isReplace())
-                accString = Constants.NT + "jthiz->fields." + object.getcClassName() + "."
+                accString = C.NT + "jthiz->fields." + object.getcClassName() + "."
                         + prop.getName() + " = n1;";
         }
 

@@ -141,7 +141,7 @@ public class CConstructorOut {
                     .isOverloaded(), cEnum == null ? null : cEnum.name));
 
             if (AdvisorWrapper.needsAutoReleasePool(con.getSelectorName(), object.name))
-                out.append(Constants.AUTORELEASEPOOL_ALLOC);
+                out.append(C.AUTORELEASEPOOL_ALLOC);
 
             if (isStruct) {
                 emitStructConstructor(arguments);
@@ -155,8 +155,8 @@ public class CConstructorOut {
                     emitObjectConstructor(con.getNameParts(), arguments);
             }
             if (AdvisorWrapper.needsAutoReleasePool(con.getSelectorName(), object.name))
-                out.append(Constants.AUTORELEASEPOOL_RELEASE);
-            out.append(Constants.END_WRAPPER + Constants.N);
+                out.append(C.AUTORELEASEPOOL_RELEASE);
+            out.append(C.END_WRAPPER + C.N);
         }
 
         if (!has_default_constructor)
@@ -181,12 +181,12 @@ public class CConstructorOut {
         Iterator<Entry<String, List<String>>> it = namePartsMap.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, List<String>> pairs = it.next();
-            out.append(Constants.NT + "if((" + object.getcClassName() + "_" + cEnumName + "*) n"
+            out.append(C.NT + "if((" + object.getcClassName() + "_" + cEnumName + "*) n"
                     + (arguments.size() + 1) + " == ");
             out.append(object.getcClassName() + "_" + cEnumName + "_GET_" + pairs.getKey() + "())"
-                    + Constants.NT + "{");
+                    + C.NT + "{");
             emitObjectConstructor(pairs.getValue(), arguments);
-            out.append(Constants.T + "}" + Constants.N);
+            out.append(C.T + "}" + C.N);
         }
     }
 
@@ -202,7 +202,7 @@ public class CConstructorOut {
         boolean isFirst = true;
         int i = 1;
 
-        out.append(Constants.NT + object.name + " objCObj = " + object.name + "Make(");
+        out.append(C.NT + object.name + " objCObj = " + object.name + "Make(");
 
         for (CArgument arg : arguments) {
             if (!isFirst)
@@ -217,21 +217,21 @@ public class CConstructorOut {
                 out.append(object.getcClassName() + "* n" + (i++) + ")->fields." + COut.packageName
                         + "NSObject.wrappedObjCObj");
         }
-        out.append(");" + Constants.NT);
+        out.append(");" + C.NT);
 
-        out.append(object.getcClassName() + "* jObj = me;" + Constants.N);
+        out.append(object.getcClassName() + "* jObj = me;" + C.N);
 
         for (CArgument arg : object.getVariables()) {
-            out.append(Constants.T + "jObj->fields." + object.getcClassName() + "." + arg.name
+            out.append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name
                     + "_ = ");
             if (Advisor.isNativeType(arg.getType().toString())) {
-                out.append("objCObj." + arg.name + ";" + Constants.N);
+                out.append("objCObj." + arg.name + ";" + C.N);
             } else if (CStruct.isStruct(arg.getType().toString()))
                 out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");"
-                        + Constants.N);
+                        + C.N);
             else
                 out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");"
-                        + Constants.N);
+                        + C.N);
         }
     }
 
@@ -256,7 +256,7 @@ public class CConstructorOut {
         StringBuilder beginListConversion = new StringBuilder("");
         StringBuilder releaseList = new StringBuilder("");
 
-        objCCall.append(Constants.NT + object.name + "* objCObj = [[" + object.name + " alloc]");
+        objCCall.append(C.NT + object.name + "* objCObj = [[" + object.name + " alloc]");
 
         ListIterator<CArgument> iterator = arguments.listIterator();
 
@@ -282,13 +282,13 @@ public class CConstructorOut {
                         i++;
                     } else {
                         objCCall.delete(0, objCCall.length());
-                        objCCall.append(Constants.NT + "XMLVM_NOT_IMPLEMENTED();" + Constants.N);
+                        objCCall.append(C.NT + "XMLVM_NOT_IMPLEMENTED();" + C.N);
                         implemented = false;
                         break;
                     }
                 }
             } else {
-                objCCall.append("init];" + Constants.N);
+                objCCall.append("init];" + C.N);
                 flag = false;
             }
         }
@@ -297,7 +297,7 @@ public class CConstructorOut {
             if (flag == true)
                 objCCall.append("];");
             methodCode.append(beginListConversion).append(objCCall).append(
-                    releaseList + Constants.N);
+                    releaseList + C.N);
             out.append(methodCode);
             emitCallToInternalConstructor();
         } else {
@@ -312,18 +312,18 @@ public class CConstructorOut {
      * @throws IOException
      */
     private void emitDefaultConstructor(boolean isStruct) throws IOException {
-        out.append(Constants.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
-        out.append("]" + Constants.N);
+        out.append(C.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
+        out.append("]" + C.N);
         if (!isStruct) {
-            out.append(Constants.T + object.name).append("* objCObj = [[").append(object.name)
-                    .append(" alloc ] init];").append(Constants.N);
+            out.append(C.T + object.name).append("* objCObj = [[").append(object.name)
+                    .append(" alloc ] init];").append(C.N);
             emitCallToInternalConstructor();
         }
-        out.append(Constants.END_WRAPPER + Constants.N);
+        out.append(C.END_WRAPPER + C.N);
     }
 
     private void emitCallToInternalConstructor() throws IOException {
-        out.append(Constants.T + object.getcClassName()).append(
-                "_INTERNAL_CONSTRUCTOR(me, objCObj);").append(Constants.N);
+        out.append(C.T + object.getcClassName()).append(
+                "_INTERNAL_CONSTRUCTOR(me, objCObj);").append(C.N);
     }
 }

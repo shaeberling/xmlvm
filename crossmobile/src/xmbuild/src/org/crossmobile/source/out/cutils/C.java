@@ -1,6 +1,6 @@
 package org.crossmobile.source.out.cutils;
 
-public class Constants {
+public class C {
 
     public static final String T                       = "    ";
     public static final String TT                      = T + T;

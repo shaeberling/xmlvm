@@ -86,7 +86,7 @@ public class CFunctionOut extends CAnyMethodOut {
         if (argList == null)
             return null;
 
-        methodCall.append(argList + ";" + Constants.N);
+        methodCall.append(argList + ";" + C.N);
         return methodCall.toString();
     }
 

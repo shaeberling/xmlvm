@@ -39,7 +39,7 @@ import org.crossmobile.source.xtype.XInjectedMethod;
 import org.crossmobile.source.xtype.XObject;
 import org.crossmobile.source.xtype.XProperty;
 import org.crossmobile.source.guru.Advisor;
-import org.crossmobile.source.out.cutils.Constants;
+import org.crossmobile.source.out.cutils.C;
 
 /**
  * Serves as the entry point for generation of C wrappers. The .m and .h files
@@ -130,22 +130,22 @@ public class COut implements Generator {
      */
     private static void emitHeader(CObject object, Writer out) throws IOException {
 
-        out.append(Constants.BEGIN_DECL + Constants.N);
+        out.append(C.BEGIN_DECL + C.N);
 
         // Including xmlvm-ios.h in NSObject causes cyclic dependencies
         if (!object.name.contains("NSObject"))
-            out.append("#include \"xmlvm-ios.h\"" + Constants.N);
+            out.append("#include \"xmlvm-ios.h\"" + C.N);
 
         if (CStruct.isStruct(object.name)) {
-            out.append(Constants.N + object.getName() + " to" + object.getName() + "(void * obj);"
-                    + Constants.N);
+            out.append(C.N + object.getName() + " to" + object.getName() + "(void * obj);"
+                    + C.N);
             out.append("JAVA_OBJECT from" + object.getName() + "(" + object.getName() + " obj);"
-                    + Constants.N);
+                    + C.N);
             out.append("#define __ADDITIONAL_INSTANCE_FIELDS_" + object.getcClassName() + " \\ "
-                    + Constants.N);
+                    + C.N);
         } else if (!(object.isProtocol())) {
             out.append("#define __ADDITIONAL_INSTANCE_FIELDS_" + object.getcClassName() + " \\ "
-                    + Constants.N);
+                    + C.N);
             if (object.name.contains("NSObject"))
                 out.append(" void *wrappedObjCObj;");
         } else {
@@ -153,8 +153,8 @@ public class COut implements Generator {
         }
 
         emitAccumulatorReplacer(object.name, out);
-        out.append(Constants.N);
-        out.append(Constants.END_DECL);
+        out.append(C.N);
+        out.append(C.END_DECL);
     }
 
     /**
@@ -171,7 +171,7 @@ public class COut implements Generator {
             XObject obj = AdvisorWrapper.getSpecialClass(className);
             for (XProperty p : obj.getProperties()) {
                 if (p.isReplace()) {
-                    out.append("JAVA_OBJECT " + p.getName() + ";\\ " + Constants.N);
+                    out.append("JAVA_OBJECT " + p.getName() + ";\\ " + C.N);
                     // TODO: Change to specific type
                 }
             }
@@ -190,7 +190,7 @@ public class COut implements Generator {
     private static void emitInjectedCode(CObject object, Writer out) throws IOException {
         List<XInjectedMethod> iMethods = AdvisorWrapper.getExternallyInjectedCode(object.name);
         for (XInjectedMethod im : iMethods) {
-            out.append(Constants.BEGIN_WRAPPER + "[" + object.getcClassName() + "_" + im.getName()
+            out.append(C.BEGIN_WRAPPER + "[" + object.getcClassName() + "_" + im.getName()
                     + "__");
             List<XArg> arguments = im.getArguments();
             if (arguments != null) {
@@ -199,8 +199,8 @@ public class COut implements Generator {
                 }
             }
             out.append("]");
-            out.append(im.getInjectedCode().get(0).getCode() + Constants.N);
-            out.append(Constants.END_WRAPPER);
+            out.append(im.getInjectedCode().get(0).getCode() + C.N);
+            out.append(C.END_WRAPPER);
         }
     }
 }
