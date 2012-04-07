@@ -253,7 +253,8 @@ public class CConstructorOut {
         StringBuilder beginListConversion = new StringBuilder("");
         StringBuilder releaseList = new StringBuilder("");
 
-        objCCall.append(C.NT + object.name + "* objCObj = [[" + object.name + " alloc]");
+        objCCall
+                .append(C.NT + object.name + "* objCObj = [[" + objectToBeInitialized() + " alloc]");
 
         ListIterator<CArgument> iterator = arguments.listIterator();
 
@@ -313,8 +314,8 @@ public class CConstructorOut {
         if (AdvisorWrapper.isCFOpaqueType(object.name) || object.name.equals("CFType"))
             out.append(C.NOT_IMPLEMENTED + C.N);
         else if (!isStruct) {
-            out.append(C.T + object.name).append("* objCObj = [[");
-            out.append(object.name);
+            out.append(C.T + objectToBeInitialized()).append("* objCObj = [[");
+            out.append(objectToBeInitialized());
             out.append(" alloc ] init];").append(C.N);
             emitCallToInternalConstructor();
         }
@@ -324,5 +325,10 @@ public class CConstructorOut {
     private void emitCallToInternalConstructor() throws IOException {
         out.append(C.T + object.getcClassName()).append("_INTERNAL_CONSTRUCTOR(me, objCObj);")
                 .append(C.N);
+    }
+
+    private String objectToBeInitialized() {
+        return AdvisorWrapper.classHasDelegateMethods(object.name) ? object.name + "Wrapper"
+                : object.name;
     }
 }

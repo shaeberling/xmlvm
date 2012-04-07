@@ -133,7 +133,7 @@ public class COut implements Generator {
         out.append(C.BEGIN_DECL + C.N);
 
         // Including xmlvm-ios.h in NSObject causes cyclic dependencies
-        if (!object.name.contains("NSObject"))
+        if (!object.name.equals("NSObject"))
             out.append("#include \"xmlvm-ios.h\"" + C.N);
 
         if (CStruct.isStruct(object.name)) {

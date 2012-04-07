@@ -87,6 +87,7 @@ public class Advisor extends DefaultHandler {
     private StringBuilder injectedCode;
     private boolean currentElement = false;
     private List<String> referenceList;
+    private boolean isDelegate = true;
     private String opaqueBaseType;
     private boolean noInternalConstructor = false;
 
@@ -173,6 +174,7 @@ public class Advisor extends DefaultHandler {
             requireAutoReleasePool = at.getValue("autoReleasePool");
             selectorName = at.getValue("name");
             isMandatory = isTrue(at.getValue("mandatory"));
+            isDelegate = isTrue(at.getValue("delegate"));
             argList = new ArrayList<XArg>(); 
         } else if(qName.equals("arg")){
             int flag = -1;
@@ -243,9 +245,11 @@ public class Advisor extends DefaultHandler {
             conids = null;
         } else if(qName.equals("selector")){
             xmethod = new XMethod(selectorName, argList, requireAutoReleasePool, isMandatory, defaultRetunValue);
+            xmethod.setDelegate(isDelegate);
             methodList.add(xmethod);
             argList = null;
             isMandatory = false;
+            isDelegate = false;
             defaultRetunValue = null;
             if(injMethod!=null)
                 xmethod.setInjectedCode(injMethod);

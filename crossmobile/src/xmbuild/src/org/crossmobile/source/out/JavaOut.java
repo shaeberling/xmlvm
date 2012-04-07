@@ -131,11 +131,12 @@ public class JavaOut implements Generator {
         
         if(isAdapterImpl) {
             type = object.hasMandatoryMethods() ? "abstract class" : "class";
-        }
-        else if (object.isProtocol()) {
+        } else if (object.isProtocol()) {
             type = object.hasOptionalMethod() ? "abstract class" : "interface";
             out.append("@org.xmlvm.XMLVMDelegate(protocolType = \"" + object.getName() + "\")\n");
-        } 
+        } else if (AdvisorWrapper.classHasDelegateMethods(object.name)) {
+            out.append("@org.xmlvm.XMLVMDelegate\n");
+        }
         
         out.append("public ").append(type).append(" ");
 
@@ -371,7 +372,9 @@ public class JavaOut implements Generator {
     private void parseMethod(CObject parent, CMethod m, CLibrary lib, boolean isAdapterImpl, Writer out) throws IOException {
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
-        if ((parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl)) {
+        // TODO Also handle non-protocols requiring wrappers, such as UIView
+        if ((parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl) || 
+                 AdvisorWrapper.isDelegateMethod(m.getSelectorName(), parent.name)) {
             String selectorDefinition = m.getDefinitions().get(0);
             ObjCSelector selector = ObjCSelectorUtil.toObjCSelector(selectorDefinition);
             if (selector == null) {

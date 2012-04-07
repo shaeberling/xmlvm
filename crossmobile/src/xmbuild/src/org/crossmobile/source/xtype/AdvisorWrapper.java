@@ -217,6 +217,33 @@ public class AdvisorWrapper {
     }
 
     /**
+     * There are methods(Eg:UIView.drawRect) which are not part of protocols but
+     * can be overridden by developer. In such cases, we need wrappers to bridge
+     * the Obj-C and generated C code.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @param objectName
+     *            - class name
+     */
+    public static boolean isDelegateMethod(String selName, String objectName) {
+        XObject obj = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.isDelegate(selName) : false;
+    }
+
+    /**
+     * There are methods(Eg:UIView.drawRect) which are not part of protocols but
+     * can be overridden by developer. In such cases, we need wrappers to bridge
+     * the Obj-C and generated C code.
+     * 
+     * @return
+     */
+    public static boolean classHasDelegateMethods(String objectName) {
+        XObject obj = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.hasDelegateMethods() : false;
+    }
+
+    /**
      * The Opaque types are special exceptions which cannot be derived from the
      * header files and he information is provided using the advice.
      * 

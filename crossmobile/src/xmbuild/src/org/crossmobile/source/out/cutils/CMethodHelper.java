@@ -103,8 +103,6 @@ public class CMethodHelper {
                 || (lib.getObjectIfPresent(name) != null && lib.getObjectIfPresent(name)
                         .isProtocol()) || name.equals("Map") || name.equals("Set")
                 || AdvisorWrapper.getOpaqueBaseType(name) != null)
-            // TODO Handle cases when return types and arguments are of
-            // CFOpaqueType
             return true;
         else
             return false;
@@ -194,7 +192,6 @@ public class CMethodHelper {
      * @return - constructed string for the return variable
      */
     public static String getReturnVariable(String returnType) {
-
         String mappedType = null;
         StringBuilder returnVariable = new StringBuilder();
 

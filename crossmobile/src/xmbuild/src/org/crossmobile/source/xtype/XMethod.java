@@ -38,7 +38,8 @@ public class XMethod {
     private boolean         hasInjectedCode        = false;
     private boolean         isMandatory            = false;
 
-    private String          defaultRetunValue            = null;
+    private String          defaultRetunValue      = null;
+    private boolean         isDelegate             = false;
 
 
     public XMethod(String selectorName, List<XArg> argList, String requireAutoReleasePool,
@@ -90,5 +91,13 @@ public class XMethod {
 
     public void setReturnValue(String defaultRetunValue) {
         this.defaultRetunValue = defaultRetunValue;
+    }
+
+    public void setDelegate(boolean isDelegate) {
+        this.isDelegate = isDelegate;
+    }
+
+    public boolean isDelegate() {
+        return this.isDelegate;
     }
 }

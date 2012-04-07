@@ -53,6 +53,7 @@ public class XObject {
 
     private Map<String, XMethod>   methodMap                 = null;
     private Map<String, XProperty> propMap                   = null;
+    private boolean                hasDelegateMethods        = false;
 
 
     public XObject(String className, List<XMethod> methodList, List<XProperty> propList,
@@ -107,6 +108,8 @@ public class XObject {
                 }
                 if (m.isMandatory())
                     hasMandatoryMethods = true;
+                if (m.isDelegate())
+                    hasDelegateMethods = true;
             }
         }
 
@@ -221,6 +224,30 @@ public class XObject {
     public String getDefaultReturnValueForSelector(String selName) {
         return methodMap.get(selName) != null ? methodMap.get(selName).getDefaultRetunValue()
                 : null;
+    }
+
+    /**
+     * There are methods(Eg:UIView.drawRect) which are not part of protocols but
+     * can be overridden by developer. In such cases, we need wrappers to bridge
+     * the Obj-C and generated C code.
+     * 
+     * @param selName
+     *            - Name of the selector
+     * @return
+     */
+    public boolean isDelegate(String selName) {
+        return methodMap.get(selName) != null ? methodMap.get(selName).isDelegate() : false;
+    }
+
+    /**
+     * There are methods(Eg:UIView.drawRect) which are not part of protocols but
+     * can be overridden by developer. In such cases, we need wrappers to bridge
+     * the Obj-C and generated C code.
+     * 
+     * @return
+     */
+    public boolean hasDelegateMethods() {
+        return hasDelegateMethods;
     }
 
     public void setOpaqueBaseType(String opaqueBaseType) {
