@@ -20,13 +20,16 @@
 
 package org.crossmobile.source.out.cutils;
 
+import java.util.List;
 import java.util.Set;
 
+import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CFunction;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
+import org.crossmobile.source.xtype.AdvisorWrapper;
 
 /**
  * This class servers as a helper class for wrapper generation of the methods.
@@ -67,7 +70,7 @@ public class CMethodHelper {
             else if (retType.equals("String"))
                 return "return fromNSString (objCObj);";
             else if (retType.equals("List"))
-                return "return jvc;";
+                return "return jvar;";
             else {
                 if (!retType.equals("Class"))
                     classInitializer.append(C.T + "if (!__TIB_"
@@ -98,7 +101,10 @@ public class CMethodHelper {
                 || name.contains("...")
                 || Advisor.isInIgnoreList(name)
                 || (lib.getObjectIfPresent(name) != null && lib.getObjectIfPresent(name)
-                        .isProtocol()) || name.equals("Map") || name.equals("Set"))
+                        .isProtocol()) || name.equals("Map") || name.equals("Set")
+                || AdvisorWrapper.getOpaqueBaseType(name) != null)
+            // TODO Handle cases when return types and arguments are of
+            // CFOpaqueType
             return true;
         else
             return false;
@@ -111,15 +117,15 @@ public class CMethodHelper {
      * 
      * @param methodName
      *            - methodName in java API (as represented in the IR)
-     * @param isStruct
-     *            - if the parent is a struct. This is required because,
-     *            functions associated with structs have the struc name
-     *            prepended to them.
+     * @param appendObjName
+     *            - true if the parent is a struct or of CFType. This is
+     *            required because, functions associated with structs and
+     *            derivatives of CFType have their name prepended to them.
      * @return returns the processed function name if it differs; Null
      *         otherwise.
      */
-    public String getModifiedFunctionName(String methodName, boolean isStruct) {
-        if (isStruct)
+    public String getModifiedFunctionName(String methodName, boolean appendObjName) {
+        if (appendObjName)
             return (objectName + methodName.substring(0, 1).toUpperCase() + methodName.substring(1));
         else
             for (CFunction f : func) {
@@ -144,7 +150,7 @@ public class CMethodHelper {
             return "ObjCArr" + i;
         } else if (argType.equals("Object")) {
             return "((" + COut.packageName + "NSObject*) n" + i + ")->fields." + COut.packageName
-                    + "NSObject.wrappedObjCObj";
+                    + "NSObject.wrappedObj";
         } else if (Advisor.isNativeType(argType)) {
             return "n" + i;
         } else if (CStruct.isStruct(argType)) {
@@ -153,7 +159,7 @@ public class CMethodHelper {
             return "toNSString" + "(n" + i + ")";
         } else {
             return "(" + argType + "*) (((" + COut.packageName + argType + "*) n" + i
-                    + ")->fields." + COut.packageName + "NSObject.wrappedObjCObj)";
+                    + ")->fields." + COut.packageName + "NSObject.wrappedObj)";
         }
     }
 
@@ -169,12 +175,13 @@ public class CMethodHelper {
     public static String getMappedDataType(String dataType) {
         String mappedType = null;
         if ((mappedType = Advisor.getDataTypeMapping(dataType)) != null) {
-            if (mappedType == "") {
+            if (mappedType == "")
                 return null;
-            } else {
-                return mappedType;
-            }
+            return mappedType;
         } else {
+            if (AdvisorWrapper.isCFOpaqueType(dataType)) {
+                return dataType + "Ref";
+            }
             return dataType;
         }
     }
@@ -187,6 +194,7 @@ public class CMethodHelper {
      * @return - constructed string for the return variable
      */
     public static String getReturnVariable(String returnType) {
+
         String mappedType = null;
         StringBuilder returnVariable = new StringBuilder();
 
@@ -196,7 +204,10 @@ public class CMethodHelper {
             else
                 return null;
 
-            if ((!Advisor.isNativeType(returnType) && !CStruct.isStruct(returnType))
+            if (returnType.contains("CGContext"))
+                System.out.println(returnType);
+            if (!(Advisor.isNativeType(returnType) || CStruct.isStruct(returnType) || AdvisorWrapper
+                    .getOpaqueBaseType(returnType) != null)
                     || returnType.equals("Object") || returnType.equals("List"))
                 returnVariable.append("*");
 
@@ -222,15 +233,40 @@ public class CMethodHelper {
         StringBuilder listConverionCode = new StringBuilder();
         listConverionCode
                 .append("NSMutableArray* ObjCArr" + i + "= [[NSMutableArray alloc] init];");
-        listConverionCode.append(C.NT + "int size" + i + " = XMLVMUtil_ArrayList_size(n"
-                + i + ");");
+        listConverionCode
+                .append(C.NT + "int size" + i + " = XMLVMUtil_ArrayList_size(n" + i + ");");
         listConverionCode.append(C.NT + "for (int i = 0; i < size" + i + "; i++) {");
         listConverionCode.append(C.NTT + COut.packageName
                 + "NSObject* jobj = XMLVMUtil_ArrayList_get(n" + i + ", i);");
-        listConverionCode.append(C.NTT + "NSObject* ObjCObj = jobj->fields."
-                + COut.packageName + "NSObject.wrappedObjCObj;");
-        listConverionCode.append(C.NTT + "[ObjCArr" + i + " addObject: ObjCObj];"
-                + C.NT + "}" + C.NT);
+        listConverionCode.append(C.NTT + "NSObject* ObjCObj = jobj->fields." + COut.packageName
+                + "NSObject.wrappedObj;");
+        listConverionCode.append(C.NTT + "[ObjCArr" + i + " addObject: ObjCObj];" + C.NT + "}"
+                + C.NT);
         return listConverionCode.toString();
+    }
+
+    /**
+     * @param arguments
+     * @param b
+     */
+    public String getRequiredMacros(List<CArgument> arguments, boolean isStatic) {
+        StringBuilder macros = new StringBuilder("");
+        int i = 1;
+        if (!isStatic) {
+            if (AdvisorWrapper.isCFOpaqueType(objectName))
+                macros.append(C.XMLVM_VAR_CFTHIZ + C.NT);
+            else if (!CStruct.isStruct(objectName))
+                macros.append(C.XMLVM_VAR_THIZ + C.NT);
+        }
+        for (CArgument a : arguments) {
+            i++;
+            if (AdvisorWrapper.isCFOpaqueType(a.getType().toString())) {
+                macros.append("XMLVM_VAR_IOS_REF" + "(" + a.getType().getProcessedName() + ", ");
+                macros.append("var" + i + ", ");
+                macros.append("n" + i);
+                macros.append(");").append(C.NT);
+            }
+        }
+        return macros.toString();
     }
 }

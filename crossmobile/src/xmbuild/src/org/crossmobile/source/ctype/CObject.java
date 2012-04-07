@@ -51,6 +51,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
     private boolean isStruct = false;
     private String cClassName = null;
     private boolean hasMandatoryMethods = false;
+    private boolean isFramework =  false;
 
     CObject(CLibrary library, String name, boolean isProtocol) {
         super(name);
@@ -347,5 +348,13 @@ public class CObject extends CAny implements FieldHolder, Serializable {
     
     public boolean hasMandatoryMethods(){
         return hasMandatoryMethods;
+    }
+
+    public void setFramework(boolean b) {
+        this.isFramework = true;
+    }
+    
+    public boolean isFramework() {
+        return this.isFramework;
     }
 }

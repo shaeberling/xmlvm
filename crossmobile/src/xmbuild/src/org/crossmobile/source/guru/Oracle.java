@@ -113,6 +113,7 @@ public class Oracle {
             CSelector s = new CMethod(f.name, false, false, f.getParameters(), canonical(f.name), true, f.getResult());
             s.addDefinition(f.definition);
             lib.getObject(f.framework).addSelector(s);
+            lib.getObjectIfPresent(f.framework).setFramework(true);
         }
     }
 

@@ -215,23 +215,20 @@ public class CConstructorOut {
                 out.append("to" + arg.getType().toString() + "(n" + (i++) + ")");
             else
                 out.append(object.getcClassName() + "* n" + (i++) + ")->fields." + COut.packageName
-                        + "NSObject.wrappedObjCObj");
+                        + "NSObject.wrappedObj");
         }
         out.append(");" + C.NT);
 
         out.append(object.getcClassName() + "* jObj = me;" + C.N);
 
         for (CArgument arg : object.getVariables()) {
-            out.append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name
-                    + "_ = ");
+            out.append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name + "_ = ");
             if (Advisor.isNativeType(arg.getType().toString())) {
                 out.append("objCObj." + arg.name + ";" + C.N);
             } else if (CStruct.isStruct(arg.getType().toString()))
-                out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");"
-                        + C.N);
+                out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");" + C.N);
             else
-                out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");"
-                        + C.N);
+                out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");" + C.N);
         }
     }
 
@@ -282,7 +279,7 @@ public class CConstructorOut {
                         i++;
                     } else {
                         objCCall.delete(0, objCCall.length());
-                        objCCall.append(C.NT + "XMLVM_NOT_IMPLEMENTED();" + C.N);
+                        objCCall.append("XMLVM_NOT_IMPLEMENTED();" + C.N);
                         implemented = false;
                         break;
                     }
@@ -296,8 +293,7 @@ public class CConstructorOut {
         if (implemented) {
             if (flag == true)
                 objCCall.append("];");
-            methodCode.append(beginListConversion).append(objCCall).append(
-                    releaseList + C.N);
+            methodCode.append(beginListConversion).append(objCCall).append(releaseList + C.N);
             out.append(methodCode);
             emitCallToInternalConstructor();
         } else {
@@ -314,16 +310,19 @@ public class CConstructorOut {
     private void emitDefaultConstructor(boolean isStruct) throws IOException {
         out.append(C.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
         out.append("]" + C.N);
-        if (!isStruct) {
-            out.append(C.T + object.name).append("* objCObj = [[").append(object.name)
-                    .append(" alloc ] init];").append(C.N);
+        if (AdvisorWrapper.isCFOpaqueType(object.name) || object.name.equals("CFType"))
+            out.append(C.NOT_IMPLEMENTED + C.N);
+        else if (!isStruct) {
+            out.append(C.T + object.name).append("* objCObj = [[");
+            out.append(object.name);
+            out.append(" alloc ] init];").append(C.N);
             emitCallToInternalConstructor();
         }
         out.append(C.END_WRAPPER + C.N);
     }
 
     private void emitCallToInternalConstructor() throws IOException {
-        out.append(C.T + object.getcClassName()).append(
-                "_INTERNAL_CONSTRUCTOR(me, objCObj);").append(C.N);
+        out.append(C.T + object.getcClassName()).append("_INTERNAL_CONSTRUCTOR(me, objCObj);")
+                .append(C.N);
     }
 }

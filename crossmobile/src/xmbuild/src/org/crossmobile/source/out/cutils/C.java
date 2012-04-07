@@ -24,5 +24,5 @@ public class C {
                                                                + "NSAutoreleasePool* p = [[NSAutoreleasePool alloc] init];"
                                                                + N;
     public static final String AUTORELEASEPOOL_RELEASE = T + "[ p release];" + N;
-
+    public static final String XMLVM_VAR_CFTHIZ        = NT + "XMLVM_VAR_CFTHIZ;";
 }

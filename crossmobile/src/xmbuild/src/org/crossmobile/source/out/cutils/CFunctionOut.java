@@ -25,6 +25,7 @@ import java.util.List;
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
+import org.crossmobile.source.xtype.AdvisorWrapper;
 
 /**
  * This class is used to get the code that is related to the methods which are C
@@ -60,18 +61,23 @@ public class CFunctionOut extends CAnyMethodOut {
         String tempName = null;
         String returnVariableStr = null;
 
-        if (method.isStatic() || parentIsStruct) {
+        if (method.isStatic() || parentIsStruct || AdvisorWrapper.isCFOpaqueType(object.name)) {
+
+            List<CArgument> arguments = method.getArguments();
+            methodCall.append(methodHelper.getRequiredMacros(arguments, method.isStatic()));
+
+            // if (isCFOpaqueType && !method.isStatic())
+            // methodCall.append(C.XMLVM_VAR_CFTHIZ + C.N);
             if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType()
                     .toString())) != null)
                 methodCall.append(returnVariableStr);
             else
                 return null;
 
-            List<CArgument> arguments = method.getArguments();
-            if (parentIsStruct) {
-                methodCall
-                        .append(methodHelper.getModifiedFunctionName(method.name, parentIsStruct));
-                argList = getArgumentsToPass(arguments, method.isStatic(), true, methodHelper);
+            if (parentIsStruct || AdvisorWrapper.isCFOpaqueType(object.name)) {
+                methodCall.append(methodHelper.getModifiedFunctionName(method.name, true));
+                argList = getArgumentsToPass(arguments, method.isStatic(), parentIsStruct,
+                        methodHelper);
             } else if ((tempName = methodHelper.getModifiedFunctionName(method.name, false)) != null) {
                 methodCall.append(tempName);
                 argList = getArgumentsToPass(arguments, method.isStatic(), false, methodHelper);
@@ -87,6 +93,9 @@ public class CFunctionOut extends CAnyMethodOut {
             return null;
 
         methodCall.append(argList + ";" + C.N);
+        if (AdvisorWrapper.isCFOpaqueType(method.getReturnType().toString()))
+            methodCall.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
+                    + ", objCObj);");
         return methodCall.toString();
     }
 
@@ -115,8 +124,11 @@ public class CFunctionOut extends CAnyMethodOut {
 
         argList.append("(");
 
-        if (!isStatic && parentIsStruct) {
-            argList.append("to" + object.name + "(me)");
+        if (!isStatic) {
+            if (parentIsStruct)
+                argList.append("to" + object.name + "(me)");
+            else if (AdvisorWrapper.getOpaqueBaseType(object.name) != null)
+                argList.append("thiz");
             isFirst = false;
         }
 

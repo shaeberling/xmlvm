@@ -57,14 +57,80 @@ public class CObjectOut {
      * @throws IOException
      */
     public void emitImpl() throws IOException {
-        out.append(C.BEGIN_IMPL + C.N);
-        emitWrapperCreator();
-        out.append(C.END_IMPL + C.N);
-        emitWrapperRegistration();
-        CConstructorOut cConsOut = new CConstructorOut(out, lib, object);
-        cConsOut.emitConstructors(false);
+        if (!object.isFramework()) {
+            if (AdvisorWrapper.needsInternalConstructor(object.name)) {
+                out.append(C.BEGIN_IMPL + C.N);
+                emitInternalConstructor();
+                if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
+                    emitWrapperCreator();
+                out.append(C.END_IMPL + C.N);
+                if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
+                    emitWrapperRegistration();
+                emitObjectDeletion();
+            }
+
+            CConstructorOut cConsOut = new CConstructorOut(out, lib, object);
+            cConsOut.emitConstructors(false);
+        }
         CMethodOut cMethodOut = new CMethodOut(out, lib, object);
         cMethodOut.emitMethods(false);
+    }
+
+    /**
+     * Every class has a Internal Constructor which calls the Internal
+     * Constructor of its base class
+     * 
+     * @throws IOException
+     */
+    private void emitInternalConstructor() throws IOException {
+        out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
+
+        out.append(AdvisorWrapper.isCFOpaqueType(object.name) ? "CFTypeRef" : "NSObject*");
+        out.append(" wrappedObj){" + C.NT);
+        out.append(COut.packageName);
+        if (object.getSuperclass() != null)
+            out.append(object.getSuperclass().getProcessedName());
+        else if (AdvisorWrapper.isCFOpaqueType(object.name))
+            out.append("CFType");
+        else
+            out.append("NSObject");
+        out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.N);
+        if (AdvisorWrapper.needsAccumulator(object.name)) {
+            out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"
+                    + C.N);
+            out.append("thiz->fields." + object.getcClassName() + ".acc_array_" + object.name
+                    + " = XMLVMUtil_NEW_ArrayList();" + C.N);
+        }
+
+        out.append("}" + C.N);
+    }
+
+    /**
+     * Wrapper creator has to be emitted for every class
+     * 
+     * @throws IOException
+     */
+    private void emitWrapperCreator() throws IOException {
+        XObject obj = AdvisorWrapper.getSpecialClass(object.name);
+        List<String> aliasList = null;
+        out.append(C.N + "static JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)" + C.N + "{");
+        out.append(C.NT + "if([obj class] == [");
+        out.append(object.name);
+        out.append(" class]");
+        if (obj != null) {
+            if ((aliasList = obj.getAliasList()) != null)
+                for (String alias : aliasList)
+                    out.append(" || ([NSStringFromClass([obj class]) isEqual:@\"" + alias + "\"])");
+        }
+
+        out.append(") " + C.NT + "{" + C.N);
+
+        out.append(C.TT + "[obj retain];" + C.N);
+        out.append(C.TT + "JAVA_OBJECT jobj = __NEW_" + object.getcClassName() + "();" + C.NTT);
+        out.append(object.getcClassName() + "_INTERNAL_CONSTRUCTOR(jobj, obj);" + C.N);
+        out.append(C.TT + "return jobj;" + C.NT + "}" + C.NT);
+        out.append("return JAVA_NULL;" + C.N + "}" + C.N);
+
     }
 
     /**
@@ -73,69 +139,30 @@ public class CObjectOut {
      * @throws IOException
      */
     private void emitWrapperRegistration() throws IOException {
-        out.append(C.BEGIN_WRAPPER + "[__INIT_" + object.getcClassName() + "]"
-                + C.N);
-        if (!object.name.contains("NSObject"))
-            out.append("xmlvm_register_wrapper_creator(__WRAPPER_CREATOR);" + C.N);
-        out.append(C.END_WRAPPER + C.N);
-
-        out.append(C.BEGIN_WRAPPER + "[__DELETE_" + object.getcClassName() + "]"
-                + C.N);
-        if (!object.name.contains("NSObject"))
-            out.append("__DELETE_" + COut.packageName + "NSObject(me, client_data);" + C.N);
+        out.append(C.BEGIN_WRAPPER + "[__INIT_" + object.getcClassName() + "]" + C.N);
+        out.append("xmlvm_register_wrapper_creator(__WRAPPER_CREATOR);" + C.N);
         out.append(C.END_WRAPPER + C.N);
 
     }
 
     /**
-     * An Internal constructor and a wrapper creator has to be emitted
+     * The C version of the obj C object has to be cleaned
      * 
      * @throws IOException
      */
-    private void emitWrapperCreator() throws IOException {
-        if (!object.name.contains("NSObject")) {
-            XObject obj = AdvisorWrapper.getSpecialClass(object.name);
-            List<String> aliasList = null;
+    private void emitObjectDeletion() throws IOException {
+        out.append(C.BEGIN_WRAPPER + "[__DELETE_" + object.getcClassName() + "]" + C.N);
+        out.append("__DELETE_" + COut.packageName);
+        if (object.getSuperclass() != null)
+            out.append(object.getSuperclass().getProcessedName());
 
-            out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
-            out.append(" NSObject* wrappedObjCObj){" + C.NT);
-            out.append("" + COut.packageName);
-            if (object.getSuperclass() != null)
-                out.append(object.getSuperclass().getProcessedName());
-            else
-                out.append("NSObject");
-            out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObjCObj);" + C.N);
+        else if (AdvisorWrapper.isCFOpaqueType(object.name))
+            out.append("CFType");
+        else
+            out.append("NSObject");
+        out.append("(me, client_data);" + C.N);
 
-            if (AdvisorWrapper.needsAccumulator(object.name)) {
-                out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"
-                        + C.N);
-                out.append("thiz->fields." + object.getcClassName() + ".acc_array_" + object.name
-                        + " = XMLVMUtil_NEW_ArrayList();" + C.N);
-            }
-
-            out.append("}" + C.N);
-
-            out.append(C.N + "static JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)"
-                    + C.N + "{");
-            out.append(C.NT + "if([obj class] == [" + object.name + " class]");
-
-            if (obj != null) {
-                if ((aliasList = obj.getAliasList()) != null)
-                    for (String alias : aliasList)
-                        out.append(" || ([NSStringFromClass([obj class]) isEqual:@\"" + alias
-                                + "\"])");
-            }
-
-            out.append(") " + C.NT + "{" + C.N);
-
-            out.append(C.TT + "[obj retain];" + C.N);
-            out.append(C.TT + "JAVA_OBJECT jobj = __NEW_" + object.getcClassName() + "();"
-                    + C.NTT);
-            out.append(object.getcClassName() + "_INTERNAL_CONSTRUCTOR(jobj, obj);" + C.N);
-            out.append(C.TT + "return jobj;" + C.NT + "}" + C.NT);
-            out.append("return JAVA_NULL;" + C.N + "}" + C.N);
-        }
-
+        out.append(C.END_WRAPPER + C.N);
     }
 
 }

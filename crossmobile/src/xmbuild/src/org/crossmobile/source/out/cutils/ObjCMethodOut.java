@@ -74,8 +74,7 @@ public class ObjCMethodOut extends CAnyMethodOut {
             accString = injectAccumulatorReplacerCode(selName);
         }
 
-        if (!method.isStatic())
-            methodCode.append(C.XMLVM_VAR_THIZ + C.NT);
+        methodCode.append(methodHelper.getRequiredMacros(arguments, method.isStatic()));
 
         if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType().toString())) != null)
             objCCall.append(returnVariableStr);
@@ -112,8 +111,11 @@ public class ObjCMethodOut extends CAnyMethodOut {
         }
 
         objCCall.append("];");
-        methodCode.append(beginListConversion).append(objCCall).append(accString).append(
-                releaseList + C.N);
+        methodCode.append(beginListConversion).append(objCCall);
+        if (AdvisorWrapper.isCFOpaqueType(method.getReturnType().toString()))
+            methodCode.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
+                    + ", objCObj);");
+        methodCode.append(accString).append(releaseList + C.N);
         return methodCode.toString();
     }
 }

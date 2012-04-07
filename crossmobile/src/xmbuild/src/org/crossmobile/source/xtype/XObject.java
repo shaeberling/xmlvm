@@ -44,6 +44,8 @@ public class XObject {
     private List<XInjectedMethod>  externallyInjectedCode    = null;
     private List<String>           references                = null;
     private boolean                hasMandatoryMethods       = false;
+    private String                 opaqueBaseType            = null;
+    private boolean                noInternalConstructor     = false;
 
     public final static int        RETAIN                    = 0;
     public final static int        RELEASE                   = 1;
@@ -217,6 +219,38 @@ public class XObject {
      * @return - return value as specified in Advisor.xml, null otherwise
      */
     public String getDefaultReturnValueForSelector(String selName) {
-        return methodMap.get(selName) != null ? methodMap.get(selName).getDefaultRetunValue() : null;
+        return methodMap.get(selName) != null ? methodMap.get(selName).getDefaultRetunValue()
+                : null;
+    }
+
+    public void setOpaqueBaseType(String opaqueBaseType) {
+        this.opaqueBaseType = opaqueBaseType;
+    }
+
+    /**
+     * There are Core Foundation Opaque type that derive from CFType and this
+     * information needs to be provided using the advisor.
+     * 
+     * @return - true if object derives from CFType (as specified in advisor),
+     *         false otherwise
+     */
+    public String getOpaqueBaseType() {
+        return opaqueBaseType;
+    }
+
+    public void setNoInternalConstructor(boolean noInternalConstructor) {
+        this.noInternalConstructor = noInternalConstructor;
+    }
+
+    /**
+     * Some classes like NSObject and CFType have their Internal constructors
+     * defined in xmlvm-ios.h and need not be generated automatically since
+     * these are special cases. This is specified via the advisor.
+     * 
+     * @return - true is object does not need Internal constructor; false
+     *         otherwise.
+     */
+    public boolean noInternalConstructor() {
+        return noInternalConstructor;
     }
 }

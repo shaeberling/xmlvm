@@ -161,6 +161,10 @@ public class JavaOut implements Generator {
         if(isAdapterImpl) {
             out.append(" implements ").append(library.getPackagename() +".").append(object.name);
         }
+        
+        String opaqueBaseType = AdvisorWrapper.getOpaqueBaseType(object.name);
+        if(opaqueBaseType != null)
+            out.append(" extends ").append(opaqueBaseType);   // Eg CFType
 
 //        if (object.getInterfaces().size() > 0) {
 //            if (alreadyDefinedExtensionForInterface)
@@ -367,8 +371,7 @@ public class JavaOut implements Generator {
     private void parseMethod(CObject parent, CMethod m, CLibrary lib, boolean isAdapterImpl, Writer out) throws IOException {
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
-        // TODO Also handle non-protocols requiring wrappers, such as UIView
-        if (parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl) {
+        if ((parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl)) {
             String selectorDefinition = m.getDefinitions().get(0);
             ObjCSelector selector = ObjCSelectorUtil.toObjCSelector(selectorDefinition);
             if (selector == null) {

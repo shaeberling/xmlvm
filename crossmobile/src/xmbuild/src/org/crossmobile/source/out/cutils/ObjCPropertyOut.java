@@ -82,6 +82,9 @@ public class ObjCPropertyOut extends CAnyMethodOut {
                 && (method.derivesFromObjC())) {
             methodCall.append(returnVariableStr);
             methodCall.append("[thiz " + CProperty.getPropertyDef(method.name) + "];");
+            if (AdvisorWrapper.isCFOpaqueType(method.getReturnType().toString()))
+                methodCall.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
+                        + ", objCObj);");
         } else
             return null;
 
@@ -156,8 +159,8 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             if (prop.isRetain())
                 accString = getAccumulativeCode(1, prop.getType());
             else if (prop.isReplace())
-                accString = C.NT + "jthiz->fields." + object.getcClassName() + "."
-                        + prop.getName() + " = n1;";
+                accString = C.NT + "jthiz->fields." + object.getcClassName() + "." + prop.getName()
+                        + " = n1;";
         }
 
         return accString.toString();

@@ -114,18 +114,17 @@ public class CMethodOut {
                 notImplemented = true;
 
             if (notImplemented == true)
-                out.append(C.T + C.NOT_IMPLEMENTED);
+                out.append(C.NOT_IMPLEMENTED);
             else if (replaceableCode != null)
                 out.append(replaceableCode);
             else {
                 if (initialInjectedCode != null)
                     out.append(initialInjectedCode);
                 if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
-                    out.append(C.AUTORELEASEPOOL_ALLOC + methodCall).append(
-                            classInitializer).append(
-                            getArrayConversionString(returnType)
-                                    + C.AUTORELEASEPOOL_RELEASE + C.T
-                                    + returnString);
+                    out.append(C.AUTORELEASEPOOL_ALLOC + methodCall).append(classInitializer)
+                            .append(
+                                    getArrayConversionString(returnType)
+                                            + C.AUTORELEASEPOOL_RELEASE + C.T + returnString);
                 else
                     out.append(methodCall).append(classInitializer).append(
                             getArrayConversionString(returnType) + C.T + returnString);
@@ -148,15 +147,14 @@ public class CMethodOut {
     private String getArrayConversionString(String returnType) {
         if (returnType.equals("List")) {
             StringBuilder convString = new StringBuilder();
-            convString.append(C.NT + "JAVA_OBJECT jvc = XMLVMUtil_NEW_ArrayList();");
+            convString.append(C.NT + "JAVA_OBJECT jvar = XMLVMUtil_NEW_ArrayList();");
             convString.append(C.NT + "int i = 0;");
             convString.append(C.NT + "for (i = 0; i < [objCObj count]; i++) {");
             convString.append(C.NTT + "NSObject* c = [objCObj objectAtIndex:i];");
             convString.append(C.NTT + "JAVA_OBJECT jc = xmlvm_get_associated_c_object(c);");
             convString.append(C.NTT + "if (jc == JAVA_NULL) {");
             convString.append(C.NTTT + "XMLVM_INTERNAL_ERROR();" + C.NTT + "}");
-            convString.append(C.NTT + "XMLVMUtil_ArrayList_add(jvc, jc);" + C.NT
-                    + "}" + C.N);
+            convString.append(C.NTT + "XMLVMUtil_ArrayList_add(jvar, jc);" + C.NT + "}" + C.N);
             return convString.toString();
         } else
             return "";

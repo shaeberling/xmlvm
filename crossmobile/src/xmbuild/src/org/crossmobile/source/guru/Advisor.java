@@ -87,6 +87,8 @@ public class Advisor extends DefaultHandler {
     private StringBuilder injectedCode;
     private boolean currentElement = false;
     private List<String> referenceList;
+    private String opaqueBaseType;
+    private boolean noInternalConstructor = false;
 
     //
     private static String lastfile;
@@ -163,21 +165,22 @@ public class Advisor extends DefaultHandler {
             dataTypeMapping.put(at.getValue("name"), at.getValue("map"));        
         } else if(qName.equals("class")){    
             className = at.getValue("name");
+            noInternalConstructor = isTrue(at.getValue("no-internal-constructor"));
             propertyList = new ArrayList<XProperty>();
             methodList = new ArrayList<XMethod>();
             injectedMethodList = new ArrayList<XInjectedMethod>();
         } else if(qName.equals("selector")){
             requireAutoReleasePool = at.getValue("autoReleasePool");
             selectorName = at.getValue("name");
-            isMandatory = (at.getValue("mandatory")!=null && at.getValue("mandatory").equals("true"))? true : false;
+            isMandatory = isTrue(at.getValue("mandatory"));
             argList = new ArrayList<XArg>(); 
         } else if(qName.equals("arg")){
             int flag = -1;
-            if(at.getValue("retain")!=null && at.getValue("retain").equals("true"))
+            if(isTrue(at.getValue("retain")))
                 flag = org.crossmobile.source.xtype.XObject.RETAIN;
-            else if(at.getValue("replace")!=null && at.getValue("replace").equals("true"))
+            else if(isTrue(at.getValue("replace")))
                 flag = org.crossmobile.source.xtype.XObject.REPLACE;
-            else if(at.getValue("release")!=null && at.getValue("release").equals("true"))
+            else if(isTrue(at.getValue("release")))
                 flag = org.crossmobile.source.xtype.XObject.RELEASE;
             xarg = new XArg(Integer.parseInt(at.getValue("position")), at.getValue("type"), flag);
             if(argList == null)
@@ -185,9 +188,9 @@ public class Advisor extends DefaultHandler {
             argList.add(xarg);
         } else if(qName.equals("property")){
             int flag = -1;
-            if(at.getValue("retain")!=null && at.getValue("retain").equals("true"))
+            if(isTrue(at.getValue("retain")))
                 flag = org.crossmobile.source.xtype.XObject.RETAIN;
-            else if(at.getValue("replace")!=null && at.getValue("replace").equals("true"))
+            else if(isTrue(at.getValue("replace")))
                 flag = org.crossmobile.source.xtype.XObject.REPLACE;
             property = new XProperty(at.getValue("name"), at.getValue("type"), flag);
             propertyList.add(property);
@@ -211,6 +214,8 @@ public class Advisor extends DefaultHandler {
             language = at.getValue("language");
             mode = at.getValue("mode");
             currentElement  = true;
+        } else if(qName.equals("opaque")) {
+            opaqueBaseType = at.getValue("base-type");
         }
         
     }
@@ -247,6 +252,8 @@ public class Advisor extends DefaultHandler {
             injMethod = null;
         } else if(qName.equals("class")){
             xobject = new XObject(className, methodList, propertyList, aliasList, referenceList, injectedMethodList);
+            xobject.setOpaqueBaseType(opaqueBaseType);
+            xobject.setNoInternalConstructor(noInternalConstructor);
             classObject.put(className, xobject);
             methodList = null;
             propertyList = null;
@@ -254,6 +261,8 @@ public class Advisor extends DefaultHandler {
             referenceList = null;
             injectedMethodList = null;
             injMethod = null;
+            opaqueBaseType = null;
+            noInternalConstructor = false;
         } else if(qName.equals("injected-method")){
             injMethod.setReturnType(returnType);
             injMethod.setName(injectedMethodName);
@@ -271,6 +280,10 @@ public class Advisor extends DefaultHandler {
             currentElement = false;
         }
        
+    }
+    
+    private boolean isTrue(String attribute){
+        return (attribute!=null && attribute.equals("true")) ? true : false;
     }
 
     public static void addDefinedObjects(CLibrary lib) {

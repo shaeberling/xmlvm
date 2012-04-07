@@ -108,10 +108,8 @@ public class AdvisorWrapper {
      */
     public static boolean selectorHasCodeInjection(String selName, String objName) {
         XObject obj = null;
-        if ((obj = getSpecialClass(objName)) != null) {
-            return obj.selectorHasInjectedCode(selName);
-        }
-        return false;
+        return ((obj = getSpecialClass(objName)) != null) ? obj.selectorHasInjectedCode(selName)
+                : false;
     }
 
     /**
@@ -125,10 +123,8 @@ public class AdvisorWrapper {
      */
     public static boolean classHasExternallyInjectedCode(String objectName) {
         XObject obj = null;
-        if ((obj = getSpecialClass(objectName)) != null) {
-            return obj.hasExternallyInjectedCode();
-        }
-        return false;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.hasExternallyInjectedCode()
+                : false;
     }
 
     /**
@@ -167,10 +163,7 @@ public class AdvisorWrapper {
      */
     public static List<String> getReferencesForObject(String name) {
         XObject obj = null;
-        if ((obj = getSpecialClass(name)) != null) {
-            return obj.getReferences();
-        }
-        return null;
+        return ((obj = getSpecialClass(name)) != null) ? obj.getReferences() : null;
     }
 
     /**
@@ -188,10 +181,8 @@ public class AdvisorWrapper {
      */
     public static boolean methodIsMandatoryForObject(String selName, String objectName) {
         XObject obj = null;
-        if ((obj = getSpecialClass(objectName)) != null) {
-            return obj.selectorIsMandatory(selName);
-        }
-        return false;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.selectorIsMandatory(selName)
+                : false;
     }
 
     /**
@@ -205,10 +196,7 @@ public class AdvisorWrapper {
      */
     public static boolean objectHasMandatoryMethods(String objectName) {
         XObject obj = null;
-        if ((obj = getSpecialClass(objectName)) != null) {
-            return obj.hasMandatoryMethods();
-        }
-        return false;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.hasMandatoryMethods() : false;
     }
 
     /**
@@ -224,9 +212,50 @@ public class AdvisorWrapper {
      */
     public static String getDefaultReturnValue(String selName, String objectName) {
         XObject obj = null;
-        if ((obj = getSpecialClass(objectName)) != null) {
-            return obj.getDefaultReturnValueForSelector(selName);
-        }
-        return null;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj
+                .getDefaultReturnValueForSelector(selName) : null;
+    }
+
+    /**
+     * The Opaque types are special exceptions which cannot be derived from the
+     * header files and he information is provided using the advice.
+     * 
+     * @param objectName
+     *            - class name
+     * @return - true if object derives from CFType (as specified in advisor),
+     *         false otherwise
+     */
+    public static String getOpaqueBaseType(String objectName) {
+        XObject obj = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.getOpaqueBaseType() : null;
+    }
+
+    /**
+     * Some classes like NSObject and CFType have their Internal constructors
+     * defined in xmlvm-ios.h and need not be generated automatically since
+     * these are special cases. This is specified via the advisor.
+     * 
+     * @param objectName
+     *            - class name
+     * @return - false if object does not need Internal constructor; true
+     *         otherwise.
+     */
+    public static boolean needsInternalConstructor(String objectName) {
+        XObject obj = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? !obj.noInternalConstructor() : true;
+    }
+
+    /**
+     * There are Core Foundation Opaque types that derive from CFType and this
+     * information needs to be provided using the advisor.
+     * 
+     * @param objectName
+     *            - class name
+     * @return - true if it is derived from CFType; false otherwise
+     */
+    public static boolean isCFOpaqueType(String objectName) {
+        String opaqueType;
+        return ((opaqueType = getOpaqueBaseType(objectName)) != null && opaqueType.equals("CFType")) ? true
+                : false;
     }
 }

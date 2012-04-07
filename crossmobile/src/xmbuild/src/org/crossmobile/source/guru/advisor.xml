@@ -347,31 +347,11 @@
         <ignore name = "NSConnection"/>
         <ignore name = "NSURLHandle"/>
         <ignore name = "CFData"/>
-        <ignore name = "CFRunLoop"/>
-        <ignore name = "CFAllocator"/>
-        <ignore name = "CFURL"/>
         <ignore name = "CFArray"/>
-        <ignore name = "CFRunLoopTimer"/>
-        <ignore name = "CFRunLoopObserver"/>
-        <ignore name = "CFRunLoopSource"/>
         <ignore name = "CFDictionary"/>
-        <ignore name = "CGImage"/>
-        <ignore name = "CGContext"/>
         <ignore name = "CGPDFArray"/>
-        <ignore name = "CGColor"/>
         <ignore name = "CGPDFObject"/>    
-        <ignore name = "CGPattern"/>
-        <ignore name = "CGPDFDocument"/>
-        <ignore name = "CGFont"/>
-        <ignore name = "CGGradient"/>
-        <ignore name = "CGDataProvider"/>
         <ignore name = "CGPDFDictionary"/>
-        <ignore name = "CGPDFPage"/>
-        <ignore name = "CGShading"/>
-        <ignore name = "CGFunction"/>
-        <ignore name = "CGColorSpace"/>
-        <ignore name = "CGLayer"/>
-        <ignore name = "CGPath"/>
         
           <!-- The extraction of variables for the below structures is not trivial  -->
         <ignore name = "NSDecimal"/> 
@@ -406,10 +386,23 @@
         
         <selector name="-addSubview:">
             <arg position="0" type="UIView" retain="true"/>
-        </selector>
+        </selector> 
+        
+        <selector name="-drawRect:" delegate="true"/>
+                 
     </class>
     
-    <class name="NSObject">
+    <class name="UIViewController">
+    	<reference class="NSString"/>
+        <selector name="-loadView" delegate="true"/>
+        <selector name="-shouldAutorotateToInterfaceOrientation:" delegate="true"/>
+        <selector name="-willAnimateRotationToInterfaceOrientation:duration:" delegate="true"/>
+    </class>    
+    
+    <!-- TODO: The information no-internal-constructor should be emitted from advisor.
+    This information will be compensated by adding code injection at class level -->
+    
+    <class name="NSObject" no-internal-constructor="true">
         <reference class="NSString"/>
         <reference class="Class"/>
         <selector name="-finalize">
@@ -463,7 +456,7 @@
                 <return type="String"/>
             </signature>
             <code language="c" mode="replace">
-                <![CDATA[return fromNSString(((org_xmlvm_ios_NSObject*) me)->fields.org_xmlvm_ios_NSObject.wrappedObjCObj);]]>
+                <![CDATA[return fromNSString(((org_xmlvm_ios_NSObject*) me)->fields.org_xmlvm_ios_NSObject.wrappedObj);]]>
             </code>
         </injected-method>
     </class>
@@ -471,6 +464,11 @@
     <class name="UITabBarController">
         <property name="viewControllers" type="List&lt;UIViewController&gt;" retain="true"/>
         <property name="delegate" type="UITabBarControllerDelegate" delegate="true" replace="true"/>
+    </class> 
+    
+    <class name="UITableView">
+        <property name="dataSource" type="UITableViewDataSource" replace="true"/>
+        <property name="delegate" type="UITableViewDelegate" delegate="true" replace="true"/>
     </class> 
     
     <class name="UIApplication">
@@ -523,10 +521,9 @@
     
     <class name="UIResponder">
         <reference class="UITouch"/>
-    </class>
-    
-    <class name="UIViewController">
-        <reference class="NSString"/>
+        <selector name="-touchesBegan:withEvent:" delegate="true"/>
+        <selector name="-touchesMoved:withEvent:" delegate="true"/>
+        <selector name="-touchesEnded:withEvent:" delegate="true"/>        
     </class>
     
     <class name="CGRect">
@@ -545,5 +542,88 @@
     <class name="CAAction">
         <reference class="NSDictionary"/>
     </class> 
+    
+    <class name = "CGContext">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CFRunLoop">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CFAllocator">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CFURL">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CFRunLoopTimer">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CFRunLoopObserver">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CFRunLoopSource">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGImage">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGColor">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGPattern">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGPDFDocument">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGFont">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGGradient">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGDataProvider">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGPDFPage">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGShading">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGFunction">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGColorSpace">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGLayer">
+        <opaque base-type = "CFType"/>
+    </class>
+    
+    <class name = "CGPath">
+        <opaque base-type = "CFType"/>
+    </class>
+
+    <class name="CFType" no-internal-constructor="true"/> 
+
 </advisor>
 
