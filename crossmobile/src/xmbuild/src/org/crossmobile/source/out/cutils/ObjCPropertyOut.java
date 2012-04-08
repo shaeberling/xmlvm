@@ -108,41 +108,36 @@ public class ObjCPropertyOut extends CAnyMethodOut {
         String releaseList = "";
         StringBuilder methodCode = new StringBuilder();
 
-        try {
-            if (AdvisorWrapper.needsAccumulator(object.name)
-                    || AdvisorWrapper.needsReplacer(object.name)) {
-                accString = injectAccumulatorReplacerCode(method.name);
-            }
-
-            methodCode.append(C.XMLVM_VAR_THIZ + C.N);
-
-            if (method.derivesFromObjC())
-                objCCall.append("[thiz " + method.name + ":");
-            else
-                throw new Exception("Setter does not derive from objective C!");
-
-            List<CArgument> arg = method.getArguments();
-            if ((arg.isEmpty()) || (arg.size() > 1))
-                throw new Exception("Argument list is empty or more thn 1");
-
-            if (arg.get(0).getType().toString().equals("List")) {
-                beginListConversion = CMethodHelper.getCodeToConvertToNSArray(1);
-                releaseList = CMethodHelper.getCodeToReleaseList(1);
-            }
-
-            if (!methodHelper.ignore(arg.get(0).getType().toString()))
-                objCCall.append(methodHelper.parseArgumentType(arg.get(0).getType().toString(), 1));
-            else
-                return null;
-
-            objCCall.append("];");
-            methodCode.append(beginListConversion).append(objCCall).append(accString).append(
-                    releaseList + C.N);
-
-        } catch (Exception e) {
-            methodCode.delete(0, methodCode.length());
-            System.out.println(e);
+        if (AdvisorWrapper.needsAccumulator(object.name)
+                || AdvisorWrapper.needsReplacer(object.name)) {
+            accString = injectAccumulatorReplacerCode(method.name);
         }
+
+        methodCode.append(C.XMLVM_VAR_THIZ + C.N);
+
+        if (method.derivesFromObjC())
+            objCCall.append("[thiz " + method.name + ":");
+        else
+            throw new RuntimeException("Setter does not derive from objective C!");
+
+        List<CArgument> arg = method.getArguments();
+        if ((arg.isEmpty()) || (arg.size() > 1))
+            throw new RuntimeException("Argument list is empty or more thn 1");
+
+        if (arg.get(0).getType().toString().equals("List")) {
+            beginListConversion = CMethodHelper.getCodeToConvertToNSArray(1);
+            releaseList = CMethodHelper.getCodeToReleaseList(1);
+        }
+
+        if (!methodHelper.ignore(arg.get(0).getType().toString()))
+            objCCall.append(methodHelper.parseArgumentType(arg.get(0).getType().toString(), 1));
+        else
+            return null;
+
+        objCCall.append("];");
+        methodCode.append(beginListConversion).append(objCCall).append(accString).append(
+                releaseList + C.N);
+
         return methodCode.toString();
     }
 

@@ -105,8 +105,12 @@ public class JavaOut implements Generator {
     }
     
     private void parseObject(CLibrary library, CObject object, boolean isAdapterImpl, Writer out) throws IOException {
-        if(isAdapterImpl)
+        if(isAdapterImpl) {
+            CType superclass = object.getSuperclass();
+            if(superclass!=null && library.getObject(superclass.getProcessedName()).isProtocol())
+                throw new RuntimeException("Superclass of a protocol is a Protocol");
             out.append("package ").append(library.getPackagename()+".adapter").append(";\n");
+        }
         else
             out.append("package ").append(library.getPackagename()).append(";\n");
         out.append("import java.util.*;\n\n");
