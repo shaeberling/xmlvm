@@ -246,11 +246,13 @@ public class Advisor extends DefaultHandler {
         } else if(qName.equals("selector")){
             xmethod = new XMethod(selectorName, argList, requireAutoReleasePool, isMandatory, defaultRetunValue);
             xmethod.setDelegate(isDelegate);
+            xmethod.setReturnType(returnType);
             methodList.add(xmethod);
             argList = null;
             isMandatory = false;
             isDelegate = false;
             defaultRetunValue = null;
+            returnType = null;
             if(injMethod!=null)
                 xmethod.setInjectedCode(injMethod);
             injMethod = null;

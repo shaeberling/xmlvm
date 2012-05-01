@@ -29,6 +29,7 @@ import org.crossmobile.source.ctype.CEnum;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
+import org.crossmobile.source.ctype.CProperty;
 import org.crossmobile.source.ctype.CType;
 import org.crossmobile.source.ctype.ObjCSelector;
 import org.crossmobile.source.ctype.ObjCSelector.Parameter;
@@ -374,9 +375,9 @@ public class JavaOut implements Generator {
     }
 
     private void parseMethod(CObject parent, CMethod m, CLibrary lib, boolean isAdapterImpl, Writer out) throws IOException {
+        
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
-        // TODO Also handle non-protocols requiring wrappers, such as UIView
         if ((parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl) || 
                  AdvisorWrapper.isDelegateMethod(m.getSelectorName(), parent.name)) {
             String selectorDefinition = m.getDefinitions().get(0);
@@ -393,9 +394,21 @@ public class JavaOut implements Generator {
         else if ((!isAdapterImpl && m.isAbstract())  
                 || (isAdapterImpl && m.isMandatory()))
             out.append("abstract ");
-        parseType(m.getReturnType(), false, getPackageName(m.getReturnType(), lib), out);
+        
+        String name = m.isProperty() ? CProperty.getPropertyDef(m.name) : m.getSelectorName();
+        if (AdvisorWrapper.hasSpecialReturnType(name, parent.name, m.isProperty())
+                && (!m.isProperty() || (m.isProperty() && m.getArguments().isEmpty()))) //getter
+            parseSpecialReturnType(name, parent.name, m.isProperty(), out);
+        else
+            parseType(m.getReturnType(), false, getPackageName(m.getReturnType(), lib), out);
         out.append(" ").append(m.getCanonicalName()).append("(");
-        parseArgumentList(m.getArguments(), parent, null, lib, out);
+        
+        if(AdvisorWrapper.hasSpecialArgumentsDefined(name, parent.name, m.isProperty())
+                && (!m.isProperty() || (m.isProperty() && !m.getArguments().isEmpty()))) //setter
+            parseSpecialArgumentList(name, parent.name, m.isProperty(), out);
+        else
+            parseArgumentList(m.getArguments(), parent, null, lib, out);
+        
         if(isAdapterImpl && !AdvisorWrapper.methodIsMandatoryForObject(m.getSelectorName(), parent.name)) {
             out.append(")");
             parseInterfaceImplementationBody(parent, m, out);
@@ -404,6 +417,48 @@ public class JavaOut implements Generator {
             out.append(")").append(m.isAbstract() ? ABSTRACTBODY : DUMMYBODY);
     }
     
+    private void parseSpecialReturnType(String name, String parent, boolean isProperty, Writer out)
+            throws IOException {
+        if (isProperty) {
+            out.append(AdvisorWrapper.getPropertyType(name, parent));
+        } else {
+            out.append(AdvisorWrapper.getSelectorReturnType(name, parent));
+        }
+
+    }
+
+    /**
+     * In some cases, the argument list obtained by parsing the objective C API
+     * need to be replaced with some special case (EG: UIControl.addTarget). In
+     * such cases, the entire set of arguments for the specific API need to
+     * specified in order via the advisor. This method is also used to alter the
+     * argument of setters for properties, where the properties have specific
+     * types (Eg: List<UIViewControllers>)
+     * 
+     * @param name
+     *            - name of the selector or property
+     * @param parent
+     *            - name of the class
+     * @param isProperty
+     *            - true if it is a property
+     * @param out
+     * @throws IOException
+     */
+    private void parseSpecialArgumentList(String name, String parent, boolean isProperty, Writer out)
+            throws IOException {
+        if (isProperty) {
+            out.append(AdvisorWrapper.getPropertyType(name, parent) + " arg0");
+        } else {
+            List<XArg> args = AdvisorWrapper.getArgumentsForMethod(name, parent);
+            int size = args.size();
+            for (int i = 0; i < args.size(); i++) {
+                out.append(args.get(i).getType() + " arg" + i);
+                if (i < size - 1)
+                    out.append(", ");
+            }
+        }
+    }
+
     /**
      * The default return types at present for interface implementations is
      * null, 0 or false. If the default return types have to be overriden with

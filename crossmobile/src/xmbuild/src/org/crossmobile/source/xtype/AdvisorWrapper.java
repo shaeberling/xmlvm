@@ -285,4 +285,102 @@ public class AdvisorWrapper {
         return ((opaqueType = getOpaqueBaseType(objectName)) != null && opaqueType.equals("CFType")) ? true
                 : false;
     }
+
+    /**
+     * In case a property has a specific type (for setters) or a selector has a
+     * specific set of arguments such information is provided via the advisor to
+     * have a strongly typed API.
+     * 
+     * @param name
+     *            - name of the property/ selector
+     * @param objectName
+     *            - name of the class
+     * @param isProperty
+     *            - true if it is a property
+     * @return - true if it has specific types defined in advisor, false
+     *         otherwise.
+     */
+    public static boolean hasSpecialArgumentsDefined(String name, String objectName,
+            boolean isProperty) {
+        XObject obj = null;
+        if (isProperty)
+            return (obj = getSpecialClass(objectName)) != null ? (obj.getPropertyType(name) != null ? true
+                    : false)
+                    : false;
+        else
+            return ((obj = getSpecialClass(objectName)) != null) ? obj
+                    .selectorHasArgumentsDefined(name) : false;
+    }
+
+    /**
+     * In case a property has a specific type (for getters) or a selector has a
+     * specific return type such information is provided via the advisor to have
+     * a strongly typed API.
+     * 
+     * @param name
+     *            - name of the property/ selector
+     * @param objectName
+     *            - name of the class
+     * @param isProperty
+     *            - true if it is a property
+     * @return - true if it has specific return type defined in advisor, false
+     *         otherwise.
+     */
+    public static boolean hasSpecialReturnType(String name, String objectName, boolean isProperty) {
+        XObject obj = null;
+        if (isProperty)
+            return (obj = getSpecialClass(objectName)) != null ? (obj.getPropertyType(name) != null ? true
+                    : false)
+                    : false;
+        else
+            return ((obj = getSpecialClass(objectName)) != null) ? obj
+                    .selectorHasReturnTypeDefined(name) : false;
+    }
+
+    /**
+     * In case a selector has a specific return type such information is
+     * provided via the advisor to have a strongly typed API.This method returns
+     * the return type specified for a selector in the advise.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @param objectName
+     *            - name of the class
+     * @return - return type specified in the advisor
+     */
+    public static String getSelectorReturnType(String selName, String objectName) {
+        return getSpecialClass(objectName).getMethodInstance(selName).getReturnType();
+    }
+
+    /**
+     * In case a selector's actual arguments obtained by parsing the objective C
+     * APIs have to be replaced with new set of arguments( Eg:
+     * UIControl.addTarget) it needs to be specified via the advisor. The advise
+     * should contain the entire set of arguments for the method in order. This
+     * method returns the list of arguments specified in the advisor for a
+     * selector.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @param objectName
+     *            - name of the class
+     * @return - list of arguments for a selector
+     */
+    public static List<XArg> getArgumentsForMethod(String selName, String objectName) {
+        return getSpecialClass(objectName).getMethodInstance(selName).getArgList();
+    }
+
+    /**
+     * In case a property has specific type (EG: List<UIViewController>) such
+     * information is provided via the advisor to have a strongly typed API.
+     * 
+     * @param property
+     *            - name of the property
+     * @return - type of the property specified in the advisor
+     */
+    public static String getPropertyType(String property, String objectName) {
+        XObject obj = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.getPropertyType(property) : null;
+    }
+
 }

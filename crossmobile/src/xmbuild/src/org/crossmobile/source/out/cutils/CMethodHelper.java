@@ -201,8 +201,6 @@ public class CMethodHelper {
             else
                 return null;
 
-            if (returnType.contains("CGContext"))
-                System.out.println(returnType);
             if (!(Advisor.isNativeType(returnType) || CStruct.isStruct(returnType) || AdvisorWrapper
                     .getOpaqueBaseType(returnType) != null)
                     || returnType.equals("Object") || returnType.equals("List"))

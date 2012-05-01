@@ -25,4 +25,5 @@ public class C {
                                                                + N;
     public static final String AUTORELEASEPOOL_RELEASE = T + "[ p release];" + N;
     public static final String XMLVM_VAR_CFTHIZ        = NT + "XMLVM_VAR_CFTHIZ;";
+   // public static final String XMLVM_VAR_IOS_REF = NT + "XMLVM_VAR_IOS_REF";
 }

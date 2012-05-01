@@ -18,10 +18,12 @@ package org.crossmobile.ant;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.channels.FileChannel;
 
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
@@ -38,6 +40,7 @@ public class SkeletonCreator extends Task {
     private File    serializedLibraryDirectory;
     private File    javaoutput;
     private File    coutput;
+    private File    codepath;
     private boolean debug;
     private String  option;
     private String objectprefix = "";
@@ -58,6 +61,10 @@ public class SkeletonCreator extends Task {
 
     public void setCoutput(File coutput) {
         this.coutput = coutput;
+    }
+    
+    public void setCodepath(File codepath) {
+        this.codepath = codepath;
     }
     
     public void setDebug(boolean debug) {
@@ -97,18 +104,20 @@ public class SkeletonCreator extends Task {
             // E.g. Make sure that new CType("UIInterfaceOrientation") has a TypeID of "int" instead of "UIInterfaceOrientation".
             CType.reregisterTypedefs(library);
         }
-
+        
         if (option.equals("gen-c-wrapper")) {
             if (coutput == null)
                 throw new BuildException("Parameter coutput should be defined.");
             createCOutputDir();
             generateCWrapper(library);
+            //copyCCode();
         } 
         else if (option.equals("gen-java-wrapper")) {
             if (javaoutput == null)
                 throw new BuildException("Parameter javaoutput should be defined.");
             createJavaOutputDir();
             generateJavaWrapper(library);
+            //copyJavaCode();
         } 
         else {
             if (coutput == null || javaoutput==null)
@@ -116,10 +125,45 @@ public class SkeletonCreator extends Task {
             createCOutputDir();
             createJavaOutputDir();
             generateJavaWrapper(library);
-            generateCWrapper(library);         
+            generateCWrapper(library);     
+            if(codepath == null)
+                throw new BuildException("Parameter codepath not defined.");
+            try {
+                copyCode("c");
+                copyCode("java");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
     }
+
+    /**
+     * @throws IOException 
+     * 
+     */
+    private void copyCode(String lang) throws IOException {
+        File file = null;
+        String outdir = null;
+
+        if(lang.equals("c")) {
+            file = new File(codepath.getPath() + File.separatorChar+"c");
+            outdir = coutput.getPath();
+        } else if (lang.equals("java")) {
+            file = new File(codepath.getPath() + File.separatorChar+"java");
+            outdir = javaoutput.getPath();
+        }
+        
+        File[] files = file.listFiles();
+        if(files == null)
+            throw new BuildException("The folder containing the code to be copied is missing");
+        for(int i=0; i<files.length; i++){
+            FileChannel in = new FileInputStream(files[i]).getChannel();
+            FileChannel out = new FileOutputStream(outdir +File.separatorChar+files[i].getName()).getChannel();
+            in.transferTo(0, in.size(), out);
+        }
+    }
+
 
     /**
      * @return the CLibrary from the SDK path

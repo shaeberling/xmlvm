@@ -37,6 +37,7 @@ public class XMethod {
     private XInjectedMethod injectedCode           = null;
     private boolean         hasInjectedCode        = false;
     private boolean         isMandatory            = false;
+    private String          returnType           = null;
 
     private String          defaultRetunValue      = null;
     private boolean         isDelegate             = false;
@@ -99,5 +100,17 @@ public class XMethod {
 
     public boolean isDelegate() {
         return this.isDelegate;
+    }
+
+    public boolean hasArgumentsDefined() {
+        return argumentList.isEmpty() ? false : true;
+    }
+
+    public String getReturnType() {
+        return this.returnType;
+    }
+
+    public void setReturnType(String returnType) {
+        this.returnType = returnType;
     }
 }

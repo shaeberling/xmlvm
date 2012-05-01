@@ -73,6 +73,7 @@
 		<xmskeletongen sdkpath="${sdk.path}" 
 					javaoutput="${xmlvm.out.java}"
 					coutput="${xmlvm.out.wrapper}"
+	                codepath="${xmlvm.code.path}"
 					debug="true"
 					option="gen-wrappers"
 					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"

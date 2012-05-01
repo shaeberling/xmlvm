@@ -395,6 +395,7 @@
     <class name="UIViewController">
     	<reference class="NSString"/>
         <selector name="-loadView" delegate="true"/>
+        <selector name="-viewWillAppear:" delegate="true"/>
         <selector name="-shouldAutorotateToInterfaceOrientation:" delegate="true"/>
         <selector name="-willAnimateRotationToInterfaceOrientation:duration:" delegate="true"/>
     </class>    
@@ -411,6 +412,15 @@
                  [thiz removeExtraMembers];
                  [thiz release];]]>
             </code>
+        </selector>
+    </class>
+    
+    <!-- TODO: position attribute should be removed since the arg are placed in the order they
+    need to appear -->
+    <class name="UIControl">
+        <selector name="-addTarget:action:forControlEvents:">
+            <arg position="0" type="UIControlDelegate" retain="true"/>
+            <arg position="1" type="int"/> 
         </selector>
     </class>
     
@@ -469,6 +479,10 @@
     <class name="UITableView">
         <property name="dataSource" type="UITableViewDataSource" replace="true"/>
         <property name="delegate" type="UITableViewDelegate" delegate="true" replace="true"/>
+        
+        <selector name="-indexPathsForRowsInRect:">
+            <return type="List&lt;NSIndexPath&gt;"/>
+        </selector>
     </class> 
     
     <class name="UIApplication">

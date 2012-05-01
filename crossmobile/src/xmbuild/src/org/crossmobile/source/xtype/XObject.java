@@ -280,4 +280,47 @@ public class XObject {
     public boolean noInternalConstructor() {
         return noInternalConstructor;
     }
+
+    /**
+     * In case a selector's actual arguments obtained by parsing the objective C
+     * APIs have to be replaced with new set of arguments( Eg:
+     * UIControl.addTarget) it needs to be specified via the advisor. The advise
+     * should contain the entire set of arguments for the method in order.
+     * 
+     * @param selName
+     *            - name of the selector
+     * @return - returns true if selector has special arguments defined; false
+     *         otherwise.
+     */
+    public boolean selectorHasArgumentsDefined(String selName) {
+        return methodMap.get(selName) != null ? methodMap.get(selName).hasArgumentsDefined()
+                : false;
+    }
+
+    /**
+     * In case a property has specific type (EG: List<UIViewController>) such
+     * information is provided via the advisor to have a strongly typed API.
+     * 
+     * @param property
+     *            - name of the property
+     * @return - returns the type of the property specified in the advisor
+     */
+    public String getPropertyType(String property) {
+        return propMap.get(property) != null ? propMap.get(property).getType() : null;
+    }
+
+    /**
+     * In case a selector has specific return type (EG: List<UIView>) such
+     * information is provided via the advisor to have a strongly typed API.
+     * 
+     * @param selName
+     *            - Name of the selector
+     * @return - returns true if return type is specified via advisor; false
+     *         otherwise.
+     */
+    public boolean selectorHasReturnTypeDefined(String selName) {
+        return methodMap.get(selName) != null ? (methodMap.get(selName).getReturnType() != null ? true
+                : false)
+                : false;
+    }
 }

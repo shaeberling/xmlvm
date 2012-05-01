@@ -27,8 +27,9 @@
  		<property file="../../xmlvm.properties"/>
 		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
 		<xmskeletongen sdkpath="${sdk.path}" 
-					javaoutput="build/wrappers/java"
-					coutput="build/wrappers/c" 
+					javaoutput="${xmlvm.out.java}"
+					coutput="${xmlvm.out.wrapper}" 
+			        codepath="${xmlvm.code.path}"
 					debug="true"
 					option="gen-wrappers"
 					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
@@ -39,7 +40,8 @@
     	<property file="../../xmlvm.properties"/>
 		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
 		<xmskeletongen sdkpath="${sdk.path}" 
-					javaoutput="build/wrappers/java"
+					javaoutput="${xmlvm.out.java}"
+	                codepath="${xmlvm.code.path}"
 					debug="true"
 					option = "gen-java-wrapper"
 					objectprefix="import org.xmlvm.XMLVMSkeletonOnly;${line.separator}@XMLVMSkeletonOnly${line.separator}"
@@ -50,7 +52,8 @@
 		<property file="../../xmlvm.properties"/>
 		<taskdef resource="${resource}" classpath="../../${classpath}" onerror="fail"/>
 		<xmskeletongen sdkpath="${sdk.path}" 
-					 coutput="build/wrappers/c" 
+					 coutput="${xmlvm.out.wrapper}" 
+	                 codepath="${xmlvm.code.path}"
 					 debug="true"
 					 option="gen-c-wrapper"
 					 packagename="${package.name}"/>
