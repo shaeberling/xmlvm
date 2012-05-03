@@ -25,6 +25,7 @@ import java.util.List;
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
+import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.ctype.CStruct;
 
 /**
@@ -36,10 +37,10 @@ import org.crossmobile.source.ctype.CStruct;
  */
 public class CUtilsHelper {
 
-    private static String          objectClassName = null;
-    private static List<CArgument> arguments       = null;
-    private final static int       METHOD          = 1;
-    private final static int       CONSTRUCTOR     = 2;
+    private static String    objectClassName = null;
+    private static List<?>   arguments       = null;
+    private final static int METHOD          = 1;
+    private final static int CONSTRUCTOR     = 2;
 
 
     /**
@@ -57,6 +58,7 @@ public class CUtilsHelper {
      *            - in case constructor is overloaded, the enum name
      * @return constructed string of the comment
      */
+    @SuppressWarnings("unchecked")
     private static String getWrapperComment(int type, String methodName,
             boolean constructorOverloaded, String enumName) {
         StringBuilder str = new StringBuilder();
@@ -65,9 +67,15 @@ public class CUtilsHelper {
             str.append(C.BEGIN_WRAPPER + "[" + objectClassName + "_" + methodName + "__");
         if (type == CONSTRUCTOR)
             str.append(C.BEGIN_WRAPPER + "[" + objectClassName + "___INIT___");
-        for (CArgument arg : arguments)
-            str.append(getWrapperCommentArgument(arg.getType().toString()));
-
+        if (!arguments.isEmpty()) {
+            if (arguments.get(0) instanceof CArgument) {
+                for (CArgument arg : (List<CArgument>) arguments)
+                    str.append(getWrapperCommentArgument(arg.getType().toString()));
+            } else if (arguments.get(0) instanceof XArg) {
+                for (XArg arg : (List<XArg>) arguments)
+                    str.append(getWrapperCommentArgument(arg.getType()));
+            }
+        }
         if (constructorOverloaded)
             str.append("_" + objectClassName + "_" + enumName);
         str.append("]" + C.N);
@@ -89,8 +97,7 @@ public class CUtilsHelper {
      *            - name of the method
      * @return constructed string of the comment
      */
-    public static String getWrapperComment(List<CArgument> args, String objClassName,
-            String methodName) {
+    public static String getWrapperComment(List<?> args, String objClassName, String methodName) {
         arguments = args;
         objectClassName = objClassName;
         return getWrapperComment(METHOD, methodName, false, null);
@@ -111,7 +118,7 @@ public class CUtilsHelper {
      *            - Enum name in case constructor is overloaded
      * @return constructed string of the comment
      */
-    public static String getWrapperComment(List<CArgument> args, String objClassName,
+    public static String getWrapperComment(List<?> args, String objClassName,
             boolean constructorOverloaded, String enumName) {
         arguments = args;
         objectClassName = objClassName;
@@ -121,6 +128,7 @@ public class CUtilsHelper {
 
     public static String getWrapperCommentArgument(String argType) {
         // May be move this mapping to Advisor later!
+        String replacedArgType = argType.replace("[]", "");
         if (argType.equals("Object"))
             return "_java_lang_Object";
         else if (Advisor.isNativeType(argType))
@@ -131,6 +139,10 @@ public class CUtilsHelper {
             return "_java_lang_String_2ARRAY";
         else if (argType.contains("String") && argType.contains("[]"))
             return "_java_lang_String_1ARRAY";
+        else if (Advisor.isNativeType(replacedArgType) && argType.contains("[][]"))
+            return "_" + replacedArgType + "_2ARRAY";
+        else if (Advisor.isNativeType(replacedArgType) && argType.contains("[]"))
+            return "_" + replacedArgType + "_1ARRAY";
         else if (CStruct.isStruct(argType))
             return "_" + COut.packageName + argType;
         else if (argType.equals("List"))

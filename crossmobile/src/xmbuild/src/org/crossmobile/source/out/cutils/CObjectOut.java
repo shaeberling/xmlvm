@@ -28,6 +28,7 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.XCode;
 import org.crossmobile.source.xtype.XObject;
 
 /**
@@ -40,9 +41,13 @@ import org.crossmobile.source.xtype.XObject;
  */
 public class CObjectOut {
 
-    private Writer   out    = null;
-    private CObject  object = null;
-    private CLibrary lib    = null;
+    private Writer   out                 = null;
+    private CObject  object              = null;
+    private CLibrary lib                 = null;
+
+    String           initialInjectedCode = null;
+    String           finalInjectedCode   = null;
+    String           replaceableCode     = null;
 
 
     public CObjectOut(Writer out, CLibrary lib, CObject object) {
@@ -58,11 +63,20 @@ public class CObjectOut {
      */
     public void emitImpl() throws IOException {
         if (!object.isFramework()) {
+            setGlobalCodeForEmission();
             if (AdvisorWrapper.needsInternalConstructor(object.name)) {
                 out.append(C.BEGIN_IMPL + C.N);
-                emitInternalConstructor();
-                if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
-                    emitWrapperCreator();
+                if (replaceableCode != null) {
+                    out.append(replaceableCode);
+                } else {
+                    if (initialInjectedCode != null)
+                        out.append(initialInjectedCode);
+                    emitInternalConstructor();
+                    if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
+                        emitWrapperCreator();
+                    if (finalInjectedCode != null)
+                        out.append(finalInjectedCode);
+                }
                 out.append(C.END_IMPL + C.N);
                 if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
                     emitWrapperRegistration();
@@ -74,6 +88,28 @@ public class CObjectOut {
         }
         CMethodOut cMethodOut = new CMethodOut(out, lib, object);
         cMethodOut.emitMethods(false);
+    }
+
+    /**
+     * 
+     */
+    private void setGlobalCodeForEmission() {
+
+        if (AdvisorWrapper.objectHasGlobalCodeInjection(object.name)) {
+            List<XCode> iCode = AdvisorWrapper.getInjectedCodeForObject(object.name);
+            int index = 0;
+            while (index < iCode.size()) {
+                if (iCode.get(index).getMode().equals("before"))
+                    initialInjectedCode = iCode.get(index).getCode();
+                else if (iCode.get(index).getMode().equals("after"))
+                    finalInjectedCode = iCode.get(index).getCode();
+                else if (iCode.get(index).getMode().equals("replace"))
+                    replaceableCode = iCode.get(index).getCode();
+                index++;
+            }
+
+        }
+
     }
 
     /**
@@ -95,7 +131,7 @@ public class CObjectOut {
         else
             out.append("NSObject");
         out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.N);
-        if (AdvisorWrapper.needsAccumulator(object.name)) {
+        if (AdvisorWrapper.classHasRetainPolicy(object.name)) {
             out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"
                     + C.N);
             out.append("thiz->fields." + object.getcClassName() + ".acc_array_" + object.name
@@ -114,9 +150,12 @@ public class CObjectOut {
         XObject obj = AdvisorWrapper.getSpecialClass(object.name);
         List<String> aliasList = null;
         out.append(C.N + "static JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)" + C.N + "{");
-        out.append(C.NT + "if([obj class] == [");
-        out.append(object.name);
-        out.append(" class]");
+        out.append(C.NT + "if(");
+        if (AdvisorWrapper.classHasDelegateMethods(object.name))
+            out.append("[obj class] == [" + object.name + "Wrapper class] || ");
+
+        out.append("[obj class] == [" + object.name + " class]");
+
         if (obj != null) {
             if ((aliasList = obj.getAliasList()) != null)
                 for (String alias : aliasList)

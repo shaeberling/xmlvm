@@ -22,12 +22,13 @@ package org.crossmobile.source.out.cutils;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
 
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.xtype.AdvisorWrapper;
-import org.crossmobile.source.xtype.XInjectedMethod;
+import org.crossmobile.source.xtype.XCode;
 
 /**
  * The class is used as code generator for methods for classes as well as
@@ -60,103 +61,84 @@ public class CMethodOut {
 
         for (CMethod method : object.getMethods()) {
 
-            Boolean notImplemented = false;
-            String methodCall = null;
-            String returnString = "";
-            CAnyMethodOut methodType = null;
-            StringBuilder classInitializer = new StringBuilder("");
+            if (!AdvisorWrapper.methodIsIgnore(method.getSelectorName(), object.name)) {
+                Boolean notImplemented = false;
+                String methodCall = null;
+                String returnString = "";
+                CAnyMethodOut methodType = null;
+                StringBuilder classInitializer = new StringBuilder("");
 
-            String initialInjectedCode = null;
-            String replaceableCode = null;
-            String finalInjectedCode = null;
+                String initialInjectedCode = null;
+                String replaceableCode = null;
+                String finalInjectedCode = null;
 
-            String returnType = method.getReturnType().toString();
-            if (!returnType.equals("void")) {
-                returnString = methodHelper.getReturnString(returnType, classInitializer);
+                String returnType = method.getReturnType().toString();
+                if (!returnType.equals("void")) {
+                    returnString = methodHelper.getReturnString(returnType, classInitializer);
 
-                if (returnString == null)
-                    notImplemented = true;
-            }
-
-            out.append(CUtilsHelper.getWrapperComment(method.getArguments(),
-                    object.getcClassName(), method.name));
-
-            if (method.isProperty()) {
-                methodType = new ObjCPropertyOut(object);
-            } else if (isStruct) {
-                methodType = new CFunctionOut(object);
-            } else {
-                if (method.derivesFromObjC())
-                    methodType = new ObjCMethodOut(object);
-                else
-                    methodType = new CFunctionOut(object);
-            }
-
-            methodCall = methodType.emit(method, isStruct, methodHelper);
-
-            if (AdvisorWrapper.selectorHasCodeInjection(method.getSelectorName(), object.name)) {
-                XInjectedMethod iMethods = AdvisorWrapper.getInjectedCodeForSelector(method
-                        .getSelectorName(), object.name);
-                int index = 0;
-                while (index < iMethods.getInjectedCode().size()) {
-                    if (iMethods.getInjectedCode().get(index).getMode().equals("before"))
-                        initialInjectedCode = iMethods.getInjectedCode().get(index).getCode();
-                    else if (iMethods.getInjectedCode().get(index).getMode().equals("after"))
-                        finalInjectedCode = iMethods.getInjectedCode().get(index).getCode();
-                    else if (iMethods.getInjectedCode().get(index).getMode().equals("replace"))
-                        replaceableCode = iMethods.getInjectedCode().get(index).getCode();
-                    index++;
+                    if (returnString == null)
+                        notImplemented = true;
                 }
 
-            }
-
-            if (methodCall == null)
-                notImplemented = true;
-
-            if (notImplemented == true)
-                out.append(C.NOT_IMPLEMENTED);
-            else if (replaceableCode != null)
-                out.append(replaceableCode);
-            else {
-                if (initialInjectedCode != null)
-                    out.append(initialInjectedCode);
-                if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
-                    out.append(C.AUTORELEASEPOOL_ALLOC + methodCall).append(classInitializer)
-                            .append(
-                                    getArrayConversionString(returnType)
-                                            + C.AUTORELEASEPOOL_RELEASE + C.T + returnString);
+                if (!method.isProperty()
+                        && AdvisorWrapper.hasSpecialArgumentsDefined(method.getSelectorName(),
+                                object.name, method.isProperty()))
+                    out.append(CUtilsHelper.getWrapperComment(AdvisorWrapper.getArgumentsForMethod(
+                            method.getSelectorName(), object.name), object.getcClassName(),
+                            method.name));
                 else
-                    out.append(methodCall).append(classInitializer).append(
-                            getArrayConversionString(returnType) + C.T + returnString);
-                if (finalInjectedCode != null)
-                    out.append(finalInjectedCode);
-            }
-            out.append(C.N + C.END_WRAPPER + C.N);
-        }
-    }
+                    out.append(CUtilsHelper.getWrapperComment(method.getArguments(), object
+                            .getcClassName(), method.name));
 
-    /**
-     * In case of a return type being an List, necessary conversion has to be
-     * made from Obj-C NSArray.
-     * 
-     * @param returnType
-     *            - return type of the method
-     * @return - returns the code that needs to be generated if return type is
-     *         List
-     */
-    private String getArrayConversionString(String returnType) {
-        if (returnType.equals("List")) {
-            StringBuilder convString = new StringBuilder();
-            convString.append(C.NT + "JAVA_OBJECT jvar = XMLVMUtil_NEW_ArrayList();");
-            convString.append(C.NT + "int i = 0;");
-            convString.append(C.NT + "for (i = 0; i < [objCObj count]; i++) {");
-            convString.append(C.NTT + "NSObject* c = [objCObj objectAtIndex:i];");
-            convString.append(C.NTT + "JAVA_OBJECT jc = xmlvm_get_associated_c_object(c);");
-            convString.append(C.NTT + "if (jc == JAVA_NULL) {");
-            convString.append(C.NTTT + "XMLVM_INTERNAL_ERROR();" + C.NTT + "}");
-            convString.append(C.NTT + "XMLVMUtil_ArrayList_add(jvar, jc);" + C.NT + "}" + C.N);
-            return convString.toString();
-        } else
-            return "";
+                if (method.isProperty()) {
+                    methodType = new ObjCPropertyOut(object);
+                } else if (isStruct) {
+                    methodType = new CFunctionOut(object);
+                } else {
+                    if (method.derivesFromObjC())
+                        methodType = new ObjCMethodOut(object);
+                    else
+                        methodType = new CFunctionOut(object);
+                }
+
+                methodCall = methodType.emit(method, isStruct, methodHelper);
+
+                if (AdvisorWrapper.selectorHasCodeInjection(method.getSelectorName(), object.name)) {
+                    List<XCode> iCodeList = AdvisorWrapper.getInjectedCodeForSelector(method
+                            .getSelectorName(), object.name);
+                    int index = 0;
+                    while (index < iCodeList.size()) {
+                        if (iCodeList.get(index).getMode().equals("before"))
+                            initialInjectedCode = iCodeList.get(index).getCode();
+                        else if (iCodeList.get(index).getMode().equals("after"))
+                            finalInjectedCode = iCodeList.get(index).getCode();
+                        else if (iCodeList.get(index).getMode().equals("replace"))
+                            replaceableCode = iCodeList.get(index).getCode();
+                        index++;
+                    }
+
+                }
+
+                if (methodCall == null)
+                    notImplemented = true;
+
+                if (replaceableCode != null)
+                    out.append(replaceableCode);
+                else if (notImplemented == true)
+                    out.append(C.NOT_IMPLEMENTED);
+                else {
+                    if (initialInjectedCode != null)
+                        out.append(initialInjectedCode);
+                    if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
+                        out.append(C.AUTORELEASEPOOL_ALLOC + methodCall).append(classInitializer)
+                                .append(C.AUTORELEASEPOOL_RELEASE + C.T + returnString);
+                    else
+                        out.append(methodCall).append(classInitializer).append(C.T + returnString);
+                    if (finalInjectedCode != null)
+                        out.append(finalInjectedCode);
+                }
+                out.append(C.N + C.END_WRAPPER + C.N);
+            }
+        }
     }
 }

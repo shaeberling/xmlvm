@@ -207,15 +207,18 @@
         <replace pattern=" {1,}" with=" "/>
     </replaceables>
 
-<!--    <generics>
+<!--    
+    <generics>
         <genericsclass class="NSData" items="2"/>
-    </generics>-->
+    </generics>
+-->
     <idconflicts>
         <returnid signature="NSObject:accessibilityElementAtIndex:int" object="Object"/>
         <returnid signature="UILocalizedIndexedCollation:currentCollation:" object="UILocalizedIndexedCollation"/>
         <returnid signature="UIPasteboard:valueForPasteboardType:String" object="Object"/>
 
-<!--        <argumentid signature="NSMutableData:NSUInteger1">
+<!--        
+        <argumentid signature="NSMutableData:NSUInteger1">
             <argumentiditem object="Object1"/>
         </argumentid>
         <argumentid signature="NSMutableData:NSUInteger2">
@@ -226,8 +229,28 @@
             <argumentiditem object="Object4"/>
             <argumentiditem object="Object5"/>
             <argumentiditem object="Object6"/>
-        </argumentid>-->
+        </argumentid>
+-->
     </idconflicts>
+    
+<!-- 
+    There are cases when 2 constructor selectors have the same signature in Objective-C.
+    When mapping this to Java, it causes conflicts. Hence enums are used to identify
+    the right constructor. The enum value for each of the constructor is provided using
+    the 'value' attribute. 'type' attribute indicates the enum name.
+    
+    Proposed solution: Make it part of <class> tag. Example is below.
+    
+    <class name="NSString">        
+        <selector name="-initWithString:">
+            <conflict type="Type" value="String"/>
+        </selector>
+        
+        <selector name="">
+            <conflict type="Type" value="File"/>
+        </selector>
+    </class>
+-->
     <conflicts>
         <constructor signature="NSData::byte[]int" type="Data">
             <citem value="Copy" name="-initWithBytes:length:"/>
@@ -293,6 +316,12 @@
 
         <!-- handle invalid methods here, e.g. [NSObject new]. Give empty string to ignore this method -->
         <!-- Note the +/- in front of the definition, to distinguish between instance & static methods -->
+        <!--  Proposed solution: Make it part of <class> tag. Example is below.
+                <class name="UITableView">
+                    <selector name="-UITableView:load:" map-to="loadBundle"/>
+                    <selector name="-UITableView:getDelegate:" map-to="getTableDelegate"/> 
+                </class> 
+         -->
         <method signature="+NSObject:new:" name=""/>
         <method signature="+NSObject:class:" name="getClassStatic"/>
         <method signature="-NSObject:class:" name="getClassInstance"/>
@@ -367,34 +396,68 @@
         <type name="boolean" map="BOOL"/>
         <type name="String" map="NSString"/>
         <type name="List" map="NSArray"/>
-        <type name="Set" map=""/>
-        <type name="Map" map=""/>
+        <type name="Set" map="NSSet"/>
+        <type name="Map" map=""/> <!-- Not handled yet! -->
     </returntypes>
     
     <class name="UIView">
-        <alias name ="UILayoutContainerView"/>
-        
-        <selector name="-initWithFrame:" autoReleasePool="true"/>
-        
-        <selector name="-removeFromSuperview">      
-            <code language="c" mode="replace">
-                <![CDATA[ XMLVM_VAR_THIZ;
-                 XMLVMUtil_ArrayList_remove(((org_xmlvm_ios_UIView*)(xmlvm_get_associated_c_object([thiz superview])))->fields.org_xmlvm_ios_UIView.acc_array_UIView, me);
-                 [thiz removeFromSuperView]; ]]>
-            </code>
-        </selector>
-        
-        <selector name="-addSubview:">
-            <arg position="0" type="UIView" retain="true"/>
-        </selector> 
-        
-        <selector name="-drawRect:" delegate="true"/>
-                 
+        <alias name ="UILayoutContainerView"/>        
+        <selector name="-initWithFrame:" autoReleasePool="true"/>       
+        <selector name="-drawRect:" delegate="true"/>                 
     </class>
     
     <class name="UIViewController">
-    	<reference class="NSString"/>
-        <selector name="-loadView" delegate="true"/>
+        <reference class="NSString"/>
+        
+        <!-- 
+        If an application class subclasses UIViewController and overrides the method 
+        'loadView', in the  overridden method, if a call is made to super's loadView 
+        the wrapper code generated should in turn make a call to Objective-C parent 
+        class's loadView. The default code that is generated automatically calls self's 
+        loadView and not the super class's method. This will lead to infinite looping 
+        and hence the injection of the below code is required.
+         -->
+        <code language="c" mode="after">
+            <![CDATA[ @interface UIViewControllerWrapper (UIViewControllerWrapperCategory)
+                      - (void) superLoadView;
+                      - (void) superViewDidLoad;
+                      - (void) superViewDidDisappear:(BOOL) animated;
+                      @end
+
+                      @implementation UIViewControllerWrapper (UIViewControllerWrapperCategory)
+                      - (void) superLoadView {
+                              [super loadView];
+                         }
+                      - (void) superViewDidLoad {
+                              [super viewDidLoad];
+                         }
+                      - (void) superViewDidDisappear:(BOOL) animated{
+                              [super viewDidDisappear:animated];
+                         }
+                      @end ]]>
+        </code>
+        
+        <selector name="-loadView" delegate="true">
+            <code language="c" mode="replace">
+                <![CDATA[ XMLVM_VAR_THIZ;
+                 [thiz superLoadView]; ]]>
+            </code>
+        </selector>
+        
+        <selector name="-viewDidLoad" delegate="true">
+            <code language="c" mode="replace">
+                <![CDATA[ XMLVM_VAR_THIZ;
+                 [thiz superViewDidLoad]; ]]>
+            </code>
+        </selector>
+        
+        <selector name="-viewDidDisappear:" delegate="true">
+            <code language="c" mode="replace">
+                <![CDATA[ XMLVM_VAR_THIZ;
+                 [thiz superViewDidDisappear:n1]; ]]>
+            </code>
+        </selector>
+        
         <selector name="-viewWillAppear:" delegate="true"/>
         <selector name="-shouldAutorotateToInterfaceOrientation:" delegate="true"/>
         <selector name="-willAnimateRotationToInterfaceOrientation:duration:" delegate="true"/>
@@ -406,22 +469,36 @@
     <class name="NSObject" no-internal-constructor="true">
         <reference class="NSString"/>
         <reference class="Class"/>
-        <selector name="-finalize">
+        
+<!--    <selector name="-finalize">
             <code language="c" mode="replace">
                 <![CDATA[ XMLVM_VAR_THIZ;
                  [thiz removeExtraMembers];
                  [thiz release];]]>
             </code>
         </selector>
+-->
+        
     </class>
     
-    <!-- TODO: position attribute should be removed since the arg are placed in the order they
-    need to appear -->
     <class name="UIControl">
         <selector name="-addTarget:action:forControlEvents:">
-            <arg position="0" type="UIControlDelegate" retain="true"/>
-            <arg position="1" type="int"/> 
+            <signature>
+                <arg type="UIControlDelegate" retain="true"/>
+                <arg type="int"/>
+            </signature> 
+            
+            <!--  This code snippet is injected for addTarget since no information related
+            to one of the arguments- UIControlDelegate is available in the parsed data.
+            UIControlDelegate is an externally injected file, and hence code injection 
+            becomes necessary here -->   
+            <code language="c" mode="replace">
+                <![CDATA[ XMLVM_VAR_THIZ;
+            UIControlDelegateWrapper* delegateWrapper = [[UIControlDelegateWrapper alloc] initWithDelegate:n1];    
+            [thiz addTarget:delegateWrapper action:@selector(raiseEvent::) forControlEvents:n2];]]>
+            </code>
         </selector>
+            
     </class>
     
     <class name="UILabel">
@@ -451,13 +528,6 @@
         <selector name="-objectsForKeys:notFoundMarker:" autoReleasePool="true"/>
     </class> 
     
-    <class name="NSMutableDictionary">
-        <selector name="-setObject:forKey:">
-            <arg position="0" type="NSObject" retain="true"/>
-            <arg position="1" type="NSObject" retain="true"/>
-        </selector>
-    </class>
-    
     <class name="NSString">
         <selector name="-substringToIndex:" autoReleasePool="true"/>
         
@@ -472,12 +542,12 @@
     </class>
     
     <class name="UITabBarController">
-        <property name="viewControllers" type="List&lt;UIViewController&gt;" retain="true"/>
+        <property name="viewControllers" type="List&lt;UIViewController&gt;"/>
         <property name="delegate" type="UITabBarControllerDelegate" delegate="true" replace="true"/>
     </class> 
     
     <class name="UITableView">
-        <property name="dataSource" type="UITableViewDataSource" replace="true"/>
+        <property name="dataSource" type="UITableViewDataSource" delegate="true" replace="true"/>
         <property name="delegate" type="UITableViewDelegate" delegate="true" replace="true"/>
         
         <selector name="-indexPathsForRowsInRect:">
@@ -485,13 +555,98 @@
         </selector>
     </class> 
     
+    <class name="UITableViewDelegate">
+    
+        <!--  
+        TODO: Using respondsToSelector: in generated macros for delegate methods
+        to identify if an application has overridden a specific delegate method 
+        would eliminate the use of 'default-value' 
+         -->
+        <selector name="-tableView:heightForRowAtIndexPath:">
+            <return default-value="44"/>
+        </selector>
+        
+        <selector name="-tableView:shouldIndentWhileEditingRowAtIndexPath:">
+            <return default-value="true"/>
+        </selector>
+        
+         <selector name="-tableView:willSelectRowAtIndexPath:">
+            <return default-value="indexPath"/>
+        </selector>
+    </class>
+       
+    <class name="UITableViewDataSource">
+        <selector name="-numberOfSectionsInTableView:">
+            <return default-value="1"/>
+        </selector>
+        
+        <selector name="-tableView:cellForRowAtIndexPath:" mandatory="true"/>
+        <selector name="-tableView:numberOfRowsInSection:" mandatory="true"/>
+    </class>        
+    
+    <class name="UIAccelerometer">
+        <property name="delegate" type="UIAccelerometerDelegate" delegate="true" replace="true"/>
+    </class>
+    
+<!--    <class name="UIImagePickerController">
+        <property name="delegate" type="UIImagePickerControllerDelegate" delegate="true" replace="true"/>
+    </class> -->
+    
+    <class name="CLLocationManager">
+        <property name="delegate" type="CLLocationManagerDelegate" delegate="true" replace="true"/>
+    </class>
+    
+    <class name="UITextField">
+        <property name="delegate" type="UITextFieldDelegate" delegate="true" replace="true"/>
+        
+        <!-- UITextField conforms to UITextInputTraits and hence we should be
+        able to access the properties of UITextInputTraaits from UITextField. 
+        However this is not taken care of in the current code and hence injecting
+        this method temporarily.
+        TODO: providing support for methods of UITextInputTraits in UITextField
+        -->
+        <injected-method name="setReturnKeyType" modifier="public">
+            <signature>
+                <return type="void"/>
+                <arg type="int"/>
+            </signature>
+            <code language="c" mode="replace">
+                <![CDATA[XMLVM_VAR_THIZ;
+                        [thiz setReturnKeyType:n1];]]>
+            </code>
+        </injected-method>
+    </class>
+    
+    <class name="UITextFieldDelegate">
+        <selector name="-textFieldShouldEndEditing:">
+            <return default-value="true"/>
+        </selector>
+        
+        <selector name="-textFieldShouldClear:">
+            <return default-value="true"/>
+        </selector>
+        
+        <selector name="-textFieldShouldBeginEditing:">
+            <return default-value="true"/>
+        </selector>     
+        
+        <selector name="-textField:shouldChangeCharactersInRange:replacementString:">
+            <return default-value="true"/>
+        </selector>
+        
+    </class>
+    
+    <class name="AVAudioPlayer">
+        <property name="delegate" type="AVAudioPlayerDelegate" delegate="true" replace="true"/>
+    </class>
+    
     <class name="UIApplication">
         <!-- Currently generating code for UIApplication.main() using the below -->
         <injected-method name="main" modifier="public static">
             <signature>
-                <arg position="0" type="String[]"/>
-                <arg position="1" type="Class&lt;? extends UIApplication&gt;"/>
-                <arg position="2" type="Class&lt;? extends UIApplicationDelegate&gt;"/>
+                <arg type="String[]"/>
+                <arg type="Class&lt;? extends UIApplication&gt;"/>
+                <arg type="Class&lt;? extends UIApplicationDelegate&gt;"/>
                 <return type="void"/>
             </signature>
             <code language="c" mode="replace">
@@ -559,6 +714,7 @@
     
     <class name = "CGContext">
         <opaque base-type = "CFType"/>
+        <selector name="CGContextDrawPDFDocument" ignore="true"/>
     </class>
     
     <class name = "CFRunLoop">
@@ -591,6 +747,13 @@
     
     <class name = "CGColor">
         <opaque base-type = "CFType"/>
+        
+        <selector name="CGColorCreateGenericGray" ignore="true"/>
+        <selector name="CGColorCreateGenericRGB" ignore="true"/>
+        <selector name="CGColorCreateGenericCMYK" ignore="true"/>
+        <selector name="CGColorCreateGenericColor" ignore="true"/>
+        <selector name="CGColorGetConstantColor" ignore="true"/>
+
     </class>
     
     <class name = "CGPattern">
@@ -599,10 +762,21 @@
     
     <class name = "CGPDFDocument">
         <opaque base-type = "CFType"/>
+        
+        <!-- This is a quick fix for methods not-appicable to iOS which throw compile error.
+        This informations should be parsed from the header files ultimately -->
+        <selector name = "CGPDFDocumentGetMediaBox" ignore="true"/>
+        <selector name = "CGPDFDocumentGetCropBox" ignore="true"/>
+        <selector name = "CGPDFDocumentGetBleedBox" ignore="true"/>
+        <selector name = "CGPDFDocumentGetTrimBox" ignore="true"/>
+        <selector name = "CGPDFDocumentGetArtBox" ignore="true"/>
+        <selector name = "CGPDFDocumentGetRotationAngle" ignore="true"/> 
     </class>
     
     <class name = "CGFont">
         <opaque base-type = "CFType"/>
+        
+        <selector name="CGFontCreateWithPlatformFont" ignore="true"/>
     </class>
     
     <class name = "CGGradient">
@@ -627,6 +801,8 @@
     
     <class name = "CGColorSpace">
         <opaque base-type = "CFType"/>
+        <selector name="CGColorSpaceCopyName" ignore="true"/>
+        <selector name="CGColorSpaceCreateWithPlatformColorSpace" ignore="true"/>
     </class>
     
     <class name = "CGLayer">

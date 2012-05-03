@@ -31,16 +31,16 @@ import java.util.List;
  */
 public class XMethod {
 
-    private String          selectorName           = null;
-    private List<XArg>      argumentList;
-    private boolean         requireAutoReleasePool = false;
-    private XInjectedMethod injectedCode           = null;
-    private boolean         hasInjectedCode        = false;
-    private boolean         isMandatory            = false;
-    private String          returnType           = null;
+    private String      selectorName           = null;
+    private List<XArg>  argumentList;
+    private boolean     requireAutoReleasePool = false;
+    private List<XCode> injectedCode           = null;
+    private boolean     isMandatory            = false;
+    private String      returnType             = null;
 
-    private String          defaultRetunValue      = null;
-    private boolean         isDelegate             = false;
+    private String      defaultRetunValue      = null;
+    private boolean     isDelegate             = false;
+    private boolean     isIgnore             = false;
 
 
     public XMethod(String selectorName, List<XArg> argList, String requireAutoReleasePool,
@@ -65,17 +65,16 @@ public class XMethod {
         return requireAutoReleasePool;
     }
 
-    public void setInjectedCode(XInjectedMethod injCode) {
+    public void setInjectedCode(List<XCode> injCode) {
         this.injectedCode = injCode;
-        hasInjectedCode = true;
     }
 
-    public XInjectedMethod getInjectedCode() {
+    public List<XCode> getInjectedCode() {
         return this.injectedCode;
     }
 
     public boolean hasInjectedCode() {
-        return hasInjectedCode;
+        return injectedCode != null ? true : false;
     }
 
     public boolean isMandatory() {
@@ -112,5 +111,13 @@ public class XMethod {
 
     public void setReturnType(String returnType) {
         this.returnType = returnType;
+    }
+
+    public void setIgnore(boolean ignore) {
+        this.isIgnore = ignore;
+    }
+
+    public boolean isIgnore() {
+        return isIgnore;
     }
 }

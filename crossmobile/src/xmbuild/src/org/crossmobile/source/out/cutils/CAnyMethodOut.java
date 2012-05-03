@@ -58,6 +58,7 @@ public abstract class CAnyMethodOut {
      */
     protected String injectAccumulatorReplacerCode(String selName) {
         List<XArg> splArgs = null;
+        int i = 1;
         StringBuilder accumulativeCode = new StringBuilder();
         XMethod method = null;
 
@@ -68,8 +69,7 @@ public abstract class CAnyMethodOut {
         if (splArgs != null) {
             for (XArg sArg : splArgs) {
                 if (sArg.isRetain()) {
-                    accumulativeCode.append(getAccumulativeCode(sArg.getPosition() + 1, sArg
-                            .getType()));
+                    accumulativeCode.append(getAccumulativeCode(i++, sArg.getType()));
                 } else if (sArg.isReplace()) {
                     // TODO is Replace only for properties?
                 }
@@ -80,8 +80,8 @@ public abstract class CAnyMethodOut {
 
     protected String getAccumulativeCode(int position, String type) {
         StringBuilder accString = new StringBuilder();
-        accString.append(C.NT + "XMLVMUtil_ArrayList_add(jthiz->fields."
-                + object.getcClassName() + ".acc_array_" + object.name + ", n" + position + ");");
+        accString.append(C.NT + "XMLVMUtil_ArrayList_add(jthiz->fields." + object.getcClassName()
+                + ".acc_array_" + object.name + ", n" + position + ");");
         return accString.toString();
     }
 

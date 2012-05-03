@@ -36,8 +36,8 @@ import java.util.Map;
 public class XObject {
 
     private String                 className                 = null;
-    private boolean                retain                    = false;
-    private boolean                replace                   = false;
+    private boolean                hasRetainPolicy           = false;
+    private boolean                hasReplacePolicy          = false;
     private List<String>           aliasList                 = null;
     private boolean                hasExternallyInjectedCode = false;
     private List<XProperty>        propertyList              = null;
@@ -54,6 +54,7 @@ public class XObject {
     private Map<String, XMethod>   methodMap                 = null;
     private Map<String, XProperty> propMap                   = null;
     private boolean                hasDelegateMethods        = false;
+    private List<XCode>            injectedCode              = null;
 
 
     public XObject(String className, List<XMethod> methodList, List<XProperty> propList,
@@ -102,9 +103,9 @@ public class XObject {
             for (XMethod m : methods) {
                 for (XArg a : m.getArgList()) {
                     if (a.isRetain())
-                        retain = true;
+                        hasRetainPolicy = true;
                     else if (a.isReplace())
-                        replace = true;
+                        hasReplacePolicy = true;
                 }
                 if (m.isMandatory())
                     hasMandatoryMethods = true;
@@ -116,19 +117,19 @@ public class XObject {
         if (propList != null) {
             for (XProperty p : propList) {
                 if (p.isRetain())
-                    retain = true;
+                    hasRetainPolicy = true;
                 else if (p.isReplace())
-                    replace = true;
+                    hasReplacePolicy = true;
             }
         }
     }
 
-    public boolean isRetain() {
-        return retain;
+    public boolean hasRetainPolicy() {
+        return hasRetainPolicy;
     }
 
-    public boolean isReplace() {
-        return replace;
+    public boolean hasReplacePolicy() {
+        return hasReplacePolicy;
     }
 
     public String getClassName() {
@@ -156,7 +157,7 @@ public class XObject {
      * @return - Instance of XInjectedMethod which has information about
      *         injected code specified by advisor
      */
-    public XInjectedMethod getInjectedCodeForSelector(String selector) {
+    public List<XCode> getInjectedCodeForSelector(String selector) {
         return methodMap.get(selector).getInjectedCode();
     }
 
@@ -235,8 +236,8 @@ public class XObject {
      *            - Name of the selector
      * @return
      */
-    public boolean isDelegate(String selName) {
-        return methodMap.get(selName) != null ? methodMap.get(selName).isDelegate() : false;
+    public boolean methodIsDelegate(String name) {
+        return methodMap.get(name) != null ? methodMap.get(name).isDelegate() : false;
     }
 
     /**
@@ -322,5 +323,35 @@ public class XObject {
         return methodMap.get(selName) != null ? (methodMap.get(selName).getReturnType() != null ? true
                 : false)
                 : false;
+    }
+
+    /**
+     * injectedCode holds any code that needs to be injected at class level.
+     * i.e., that code that has to be injected between //
+     * XMLVM_BEGIN_IMPLEMENTATION and // XMLVM_END_IMPLEMENTATION
+     * 
+     * @param globalCodeList
+     *            - code that needs to be injected
+     */
+    public void setInjectedCode(List<XCode> globalCodeList) {
+        this.injectedCode = globalCodeList;
+
+    }
+
+    /**
+     * @return true if there is global code that has to be injected; false
+     *         otherwise
+     */
+    public boolean hasGlobalCodeInjection() {
+        return injectedCode != null ? true : false;
+    }
+
+    /**
+     * 
+     * @return Returns the list of code snippet that has to be injected between
+     *         // XMLVM_BEGIN_IMPLEMENTATION and // XMLVM_END_IMPLEMENTATION
+     */
+    public List<XCode> getGlobalCodeToInject() {
+        return injectedCode;
     }
 }

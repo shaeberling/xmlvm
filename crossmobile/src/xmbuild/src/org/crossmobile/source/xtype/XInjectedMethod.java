@@ -72,8 +72,7 @@ public class XInjectedMethod {
         return this.arguments;
     }
 
-    public void addCode(String injectedCode, String language, String mode) {
-        XCode code = new XCode(injectedCode, language, mode);
+    public void addCode(XCode code) {
         this.code.add(code);
     }
 

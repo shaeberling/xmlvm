@@ -32,12 +32,10 @@ public class XArg {
     private boolean isRetain  = false;
     private boolean isRelease = false;
     private boolean isReplace = false;
-    private int     position;
     private String  type      = null;
 
 
-    public XArg(int position, String type, int flags) {
-        this.position = position;
+    public XArg(String type, int flags) {
         this.type = type;
         setFlags(flags);
     }
@@ -63,10 +61,6 @@ public class XArg {
 
     public boolean isRelease() {
         return isRelease;
-    }
-
-    public int getPosition() {
-        return position;
     }
 
     public String getType() {

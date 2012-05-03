@@ -40,9 +40,9 @@ public class AdvisorWrapper {
      * @return true if a c-reference is needed for any of the arguments in the
      *         class; false otherwise.
      */
-    public static boolean needsReplacer(String objectName) {
+    public static boolean classHasReplacePolicy(String objectName) {
         return (Advisor.getSpecialClasses().containsKey(objectName) && Advisor.getSpecialClasses()
-                .get(objectName).isReplace());
+                .get(objectName).hasReplacePolicy());
     }
 
     /**
@@ -65,9 +65,9 @@ public class AdvisorWrapper {
      *            - name of the class
      * @return true if accumulative array is required; false otherwise.
      */
-    public static boolean needsAccumulator(String objectName) {
+    public static boolean classHasRetainPolicy(String objectName) {
         return (Advisor.getSpecialClasses().containsKey(objectName) && Advisor.getSpecialClasses()
-                .get(objectName).isRetain());
+                .get(objectName).hasRetainPolicy());
 
     }
 
@@ -135,7 +135,7 @@ public class AdvisorWrapper {
      * @return List of instances of XInjectedMethod class which contain the
      *         information for code injection
      */
-    public static XInjectedMethod getInjectedCodeForSelector(String selName, String objectName) {
+    public static List<XCode> getInjectedCodeForSelector(String selName, String objectName) {
         return getSpecialClass(objectName).getInjectedCodeForSelector(selName);
     }
 
@@ -228,7 +228,8 @@ public class AdvisorWrapper {
      */
     public static boolean isDelegateMethod(String selName, String objectName) {
         XObject obj = null;
-        return ((obj = getSpecialClass(objectName)) != null) ? obj.isDelegate(selName) : false;
+        return ((obj = getSpecialClass(objectName)) != null) ? obj.methodIsDelegate(selName)
+                : false;
     }
 
     /**
@@ -381,6 +382,52 @@ public class AdvisorWrapper {
     public static String getPropertyType(String property, String objectName) {
         XObject obj = null;
         return ((obj = getSpecialClass(objectName)) != null) ? obj.getPropertyType(property) : null;
+    }
+
+    /**
+     * Some system APIs are applicable only for MAC OS and not applicable to
+     * iPhone. Including these APIs in generation of C back-end will result in
+     * compile errors. Currently this is specified using advice. A better
+     * solution is to find this while parsing the headers.
+     * 
+     * @param selName
+     *            - Name of the selector
+     * @param objectName
+     *            - name of the class
+     * @return - true if not applicable to iphone; false otherwise
+     */
+    public static boolean methodIsIgnore(String selName, String objectName) {
+        XObject obj = null;
+        XMethod meth = null;
+        return (obj = getSpecialClass(objectName)) != null ? ((meth = obj
+                .getMethodInstance(selName)) != null ? meth.isIgnore() : false) : false;
+    }
+
+    /**
+     * There are instances when code has to be injected at class level between
+     * // XMLVM_BEGIN_IMPLEMENTATION and //XMLVM_END_IMPLEMENTATION. This is
+     * specified using the advisor.
+     * 
+     * @param objectName
+     *            - Name of the class
+     * @return true if there is code to be injected at class level; false
+     *         otherwise
+     */
+    public static boolean objectHasGlobalCodeInjection(String objectName) {
+        XObject obj = null;
+        return (obj = getSpecialClass(objectName)) != null ? obj.hasGlobalCodeInjection() : false;
+    }
+
+    /**
+     * This method is used to return code that has to be injected at class level
+     * between // XMLVM_BEGIN_IMPLEMENTATION and //XMLVM_END_IMPLEMENTATION.
+     * 
+     * @param objectName
+     *            - Name of the class
+     * @return return the list of code snippet for injection
+     */
+    public static List<XCode> getInjectedCodeForObject(String objectName) {
+        return getSpecialClass(objectName).getGlobalCodeToInject();
     }
 
 }

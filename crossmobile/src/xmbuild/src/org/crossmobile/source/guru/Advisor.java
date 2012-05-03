@@ -29,6 +29,7 @@ import org.crossmobile.source.ctype.CEnum;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CType;
 import org.crossmobile.source.xtype.XArg;
+import org.crossmobile.source.xtype.XCode;
 import org.crossmobile.source.xtype.XInjectedMethod;
 import org.crossmobile.source.xtype.XMethod;
 import org.crossmobile.source.xtype.XProperty;
@@ -90,6 +91,13 @@ public class Advisor extends DefaultHandler {
     private boolean isDelegate = true;
     private String opaqueBaseType;
     private boolean noInternalConstructor = false;
+    private boolean ignoreMethod = false;
+    private List<XCode> globalCodeList;
+    private List<XCode> selectorCodeList;
+    XCode code;
+    boolean isSelector = false;
+    private boolean isInjectedMethod = false;
+    private List<XCode> injectedMethodCodeList;
 
     //
     private static String lastfile;
@@ -175,7 +183,9 @@ public class Advisor extends DefaultHandler {
             selectorName = at.getValue("name");
             isMandatory = isTrue(at.getValue("mandatory"));
             isDelegate = isTrue(at.getValue("delegate"));
+            ignoreMethod = isTrue(at.getValue("ignore"));
             argList = new ArrayList<XArg>(); 
+            isSelector = true;
         } else if(qName.equals("arg")){
             int flag = -1;
             if(isTrue(at.getValue("retain")))
@@ -184,7 +194,7 @@ public class Advisor extends DefaultHandler {
                 flag = org.crossmobile.source.xtype.XObject.REPLACE;
             else if(isTrue(at.getValue("release")))
                 flag = org.crossmobile.source.xtype.XObject.RELEASE;
-            xarg = new XArg(Integer.parseInt(at.getValue("position")), at.getValue("type"), flag);
+            xarg = new XArg(at.getValue("type"), flag);
             if(argList == null)
                 argList = new ArrayList<XArg>();
             argList.add(xarg);
@@ -196,6 +206,7 @@ public class Advisor extends DefaultHandler {
                 flag = org.crossmobile.source.xtype.XObject.REPLACE;
             property = new XProperty(at.getValue("name"), at.getValue("type"), flag);
             propertyList.add(property);
+            isDelegate = false;
         } else if(qName.equals("alias")) { 
             if(aliasList == null)
                 aliasList = new ArrayList<String>();
@@ -208,6 +219,7 @@ public class Advisor extends DefaultHandler {
             injMethod = new XInjectedMethod();
             injectedMethodName = at.getValue("name");
             injectedMethodModifier = at.getValue("modifier");
+            isInjectedMethod = true;
         } else if(qName.equals("return")) {
             returnType = at.getValue("type");
             defaultRetunValue = at.getValue("default-value");
@@ -247,41 +259,56 @@ public class Advisor extends DefaultHandler {
             xmethod = new XMethod(selectorName, argList, requireAutoReleasePool, isMandatory, defaultRetunValue);
             xmethod.setDelegate(isDelegate);
             xmethod.setReturnType(returnType);
+            xmethod.setIgnore(ignoreMethod);
             methodList.add(xmethod);
             argList = null;
             isMandatory = false;
             isDelegate = false;
+            ignoreMethod = false;
             defaultRetunValue = null;
             returnType = null;
-            if(injMethod!=null)
-                xmethod.setInjectedCode(injMethod);
-            injMethod = null;
+            xmethod.setInjectedCode(selectorCodeList);
+            selectorCodeList = null;
+            isSelector = false;
         } else if(qName.equals("class")){
             xobject = new XObject(className, methodList, propertyList, aliasList, referenceList, injectedMethodList);
             xobject.setOpaqueBaseType(opaqueBaseType);
             xobject.setNoInternalConstructor(noInternalConstructor);
+            xobject.setInjectedCode(globalCodeList);
             classObject.put(className, xobject);
             methodList = null;
             propertyList = null;
             aliasList = null;
             referenceList = null;
             injectedMethodList = null;
-            injMethod = null;
             opaqueBaseType = null;
+            globalCodeList = null;
             noInternalConstructor = false;
         } else if(qName.equals("injected-method")){
             injMethod.setReturnType(returnType);
             injMethod.setName(injectedMethodName);
             injMethod.setModifier(injectedMethodModifier);
             injMethod.setArguments(argList);
-            XInjectedMethod im = injMethod;
-            if(injectedMethodName!=null)
-                injectedMethodList.add(im);
+            injectedMethodList.add(injMethod);
             argList = null;
+            returnType = null;
+            injMethod = null;
+            isInjectedMethod = false;
         } else if(qName.equals("code")){
-            if(injMethod == null)
-                injMethod = new XInjectedMethod();
-            injMethod.addCode(injectedCode.toString(), language, mode);
+            code = new XCode(injectedCode.toString(), language, mode);           
+            if(isSelector) {
+                if(selectorCodeList == null)
+                    selectorCodeList = new ArrayList<XCode>();
+                selectorCodeList.add(code);
+            } else if(isInjectedMethod){
+                if(injMethod == null)
+                    injMethod = new XInjectedMethod();
+                injMethod.addCode(code);
+            } else {
+                if(globalCodeList == null)
+                    globalCodeList = new ArrayList<XCode>();
+                globalCodeList.add(code);
+            }
             injectedCode = null;
             currentElement = false;
         }

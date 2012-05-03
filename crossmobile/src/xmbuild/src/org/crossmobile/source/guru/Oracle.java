@@ -99,6 +99,7 @@ public class Oracle {
                             args.remove(0);
                         }
                         s = new CMethod(fname, false, false, args, canonical(fname), isStatic, f.getResult());
+                        s.setSelectorName(f.name);
                     }
                     s.addDefinition(f.definition);
                     o.addSelector(s);

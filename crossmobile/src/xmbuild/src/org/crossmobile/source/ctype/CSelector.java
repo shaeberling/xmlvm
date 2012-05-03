@@ -195,7 +195,7 @@ public abstract class CSelector extends CAnyMethod {
         return this.nameParts;
     }
     
-    private void setSelectorName(String selName) {
+    public void setSelectorName(String selName) {
        this.selectorName = selName;
     }
     
