@@ -208,7 +208,7 @@ public class JavaOut implements Generator {
         if (object.hasStaticMethods()) {
             out.append("\n\t/*\n\t * Static methods\n\t */\n");
             for (CMethod m : object.getMethods())
-                if (m.isStatic()) {
+                if (m.isStatic() && !AdvisorWrapper.methodIsIgnore(m.getSelectorName(), object.name)) {
                     if(isAdapterImpl)
                         parseMethod(object, m, library, true, out);
                     else
@@ -250,7 +250,7 @@ public class JavaOut implements Generator {
         if (object.hasInstanceMethods()) {
             out.append("\n\t/*\n\t * Instance methods\n\t */\n");
             for (CMethod m : object.getMethods())
-                if (!m.isStatic() && !m.isProperty()) {
+                if ((!m.isStatic() && !m.isProperty()) && !AdvisorWrapper.methodIsIgnore(m.getSelectorName(), object.name)) {
                     if(isAdapterImpl)
                         parseMethod(object, m, library, true, out);
                     else
