@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XMethod;
 import org.crossmobile.source.xtype.XObject;
@@ -62,7 +62,7 @@ public abstract class CAnyMethodOut {
         StringBuilder accumulativeCode = new StringBuilder();
         XMethod method = null;
 
-        XObject obj = AdvisorWrapper.getSpecialClass(object.name);
+        XObject obj = AdvisorMediator.getSpecialClass(object.name);
         if ((method = obj.getMethodInstance(selName)) != null)
             splArgs = method.getArgList();
 

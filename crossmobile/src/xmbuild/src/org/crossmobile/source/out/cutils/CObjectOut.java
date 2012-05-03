@@ -27,7 +27,7 @@ import java.util.List;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.out.COut;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XCode;
 import org.crossmobile.source.xtype.XObject;
 
@@ -64,7 +64,7 @@ public class CObjectOut {
     public void emitImpl() throws IOException {
         if (!object.isFramework()) {
             setGlobalCodeForEmission();
-            if (AdvisorWrapper.needsInternalConstructor(object.name)) {
+            if (AdvisorMediator.needsInternalConstructor(object.name)) {
                 out.append(C.BEGIN_IMPL + C.N);
                 if (replaceableCode != null) {
                     out.append(replaceableCode);
@@ -72,13 +72,13 @@ public class CObjectOut {
                     if (initialInjectedCode != null)
                         out.append(initialInjectedCode);
                     emitInternalConstructor();
-                    if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
+                    if (AdvisorMediator.getOpaqueBaseType(object.name) == null)
                         emitWrapperCreator();
                     if (finalInjectedCode != null)
                         out.append(finalInjectedCode);
                 }
                 out.append(C.END_IMPL + C.N);
-                if (AdvisorWrapper.getOpaqueBaseType(object.name) == null)
+                if (AdvisorMediator.getOpaqueBaseType(object.name) == null)
                     emitWrapperRegistration();
                 emitObjectDeletion();
             }
@@ -95,8 +95,8 @@ public class CObjectOut {
      */
     private void setGlobalCodeForEmission() {
 
-        if (AdvisorWrapper.objectHasGlobalCodeInjection(object.name)) {
-            List<XCode> iCode = AdvisorWrapper.getInjectedCodeForObject(object.name);
+        if (AdvisorMediator.objectHasGlobalCodeInjection(object.name)) {
+            List<XCode> iCode = AdvisorMediator.getInjectedCodeForObject(object.name);
             int index = 0;
             while (index < iCode.size()) {
                 if (iCode.get(index).getMode().equals("before"))
@@ -121,17 +121,17 @@ public class CObjectOut {
     private void emitInternalConstructor() throws IOException {
         out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
 
-        out.append(AdvisorWrapper.isCFOpaqueType(object.name) ? "CFTypeRef" : "NSObject*");
+        out.append(AdvisorMediator.isCFOpaqueType(object.name) ? "CFTypeRef" : "NSObject*");
         out.append(" wrappedObj){" + C.NT);
         out.append(COut.packageName);
         if (object.getSuperclass() != null)
             out.append(object.getSuperclass().getProcessedName());
-        else if (AdvisorWrapper.isCFOpaqueType(object.name))
+        else if (AdvisorMediator.isCFOpaqueType(object.name))
             out.append("CFType");
         else
             out.append("NSObject");
         out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.N);
-        if (AdvisorWrapper.classHasRetainPolicy(object.name)) {
+        if (AdvisorMediator.classHasRetainPolicy(object.name)) {
             out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"
                     + C.N);
             out.append("thiz->fields." + object.getcClassName() + ".acc_array_" + object.name
@@ -147,11 +147,11 @@ public class CObjectOut {
      * @throws IOException
      */
     private void emitWrapperCreator() throws IOException {
-        XObject obj = AdvisorWrapper.getSpecialClass(object.name);
+        XObject obj = AdvisorMediator.getSpecialClass(object.name);
         List<String> aliasList = null;
         out.append(C.N + "static JAVA_OBJECT __WRAPPER_CREATOR(NSObject* obj)" + C.N + "{");
         out.append(C.NT + "if(");
-        if (AdvisorWrapper.classHasDelegateMethods(object.name))
+        if (AdvisorMediator.classHasDelegateMethods(object.name))
             out.append("[obj class] == [" + object.name + "Wrapper class] || ");
 
         out.append("[obj class] == [" + object.name + " class]");
@@ -195,7 +195,7 @@ public class CObjectOut {
         if (object.getSuperclass() != null)
             out.append(object.getSuperclass().getProcessedName());
 
-        else if (AdvisorWrapper.isCFOpaqueType(object.name))
+        else if (AdvisorMediator.isCFOpaqueType(object.name))
             out.append("CFType");
         else
             out.append("NSObject");

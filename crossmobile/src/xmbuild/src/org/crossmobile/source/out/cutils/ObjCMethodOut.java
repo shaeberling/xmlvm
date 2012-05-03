@@ -26,7 +26,7 @@ import java.util.ListIterator;
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 
 /**
  * This class is used to get the code that is related to methods that are
@@ -69,12 +69,12 @@ public class ObjCMethodOut extends CAnyMethodOut {
         StringBuilder releaseList = new StringBuilder("");
         StringBuilder methodCode = new StringBuilder();
 
-        if (AdvisorWrapper.needsAccumulator(object.name)
-                || AdvisorWrapper.needsReplacer(object.name)) {
+        if (AdvisorMediator.classHasRetainPolicy(object.name)
+                || AdvisorMediator.classHasReplacePolicy(object.name)) {
             accString = injectAccumulatorReplacerCode(selName);
         }
 
-        methodCode.append(methodHelper.getRequiredMacros(arguments, method.isStatic()));
+        methodCode.append(methodHelper.getRequiredMacros(arguments, method.isStatic(), false));
 
         if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType().toString())) != null)
             objCCall.append(returnVariableStr);
@@ -94,13 +94,14 @@ public class ObjCMethodOut extends CAnyMethodOut {
         for (String namePart : nameParts) {
             if (iterator.hasNext()) {
                 CArgument argument = (CArgument) iterator.next();
-                if (argument.getType().toString().equals("List")) {
-                    beginListConversion.append(CMethodHelper.getCodeToConvertToNSArray(i));
-                    releaseList.append(CMethodHelper.getCodeToReleaseList(i));
+                argType = argument.getType().toString();
+
+                if (CMethodHelper.requiresConversion(argType)) {
+                    beginListConversion.append(CMethodHelper.getCodeToConvertVariables(i, argType));
+                    releaseList.append(CMethodHelper.getCodeToReleaseVar(i));
                 }
 
                 objCCall.append(" " + namePart + ":");
-                argType = argument.getType().toString();
 
                 if (!methodHelper.ignore(argType)) {
                     objCCall.append(methodHelper.parseArgumentType(argType, i));
@@ -112,9 +113,9 @@ public class ObjCMethodOut extends CAnyMethodOut {
 
         objCCall.append("];");
         methodCode.append(beginListConversion).append(objCCall);
-        if (AdvisorWrapper.isCFOpaqueType(method.getReturnType().toString()))
-            methodCode.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
-                    + ", objCObj);");
+        if (AdvisorMediator.isCFOpaqueType(method.getReturnType().toString()))
+            methodCode.append(C.T + "XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
+                    + ", objCObj);" + C.N);
         methodCode.append(accString).append(releaseList + C.N);
         return methodCode.toString();
     }

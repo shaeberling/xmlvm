@@ -27,7 +27,7 @@ import java.util.List;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XCode;
 
 /**
@@ -61,7 +61,7 @@ public class CMethodOut {
 
         for (CMethod method : object.getMethods()) {
 
-            if (!AdvisorWrapper.methodIsIgnore(method.getSelectorName(), object.name)) {
+            if (!AdvisorMediator.methodIsIgnore(method.getSelectorName(), object.name)) {
                 Boolean notImplemented = false;
                 String methodCall = null;
                 String returnString = "";
@@ -81,11 +81,11 @@ public class CMethodOut {
                 }
 
                 if (!method.isProperty()
-                        && AdvisorWrapper.hasSpecialArgumentsDefined(method.getSelectorName(),
+                        && AdvisorMediator.hasSpecialArgumentsDefined(method.getSelectorName(),
                                 object.name, method.isProperty()))
-                    out.append(CUtilsHelper.getWrapperComment(AdvisorWrapper.getArgumentsForMethod(
-                            method.getSelectorName(), object.name), object.getcClassName(),
-                            method.name));
+                    out.append(CUtilsHelper.getWrapperComment(AdvisorMediator
+                            .getArgumentsForMethod(method.getSelectorName(), object.name), object
+                            .getcClassName(), method.name));
                 else
                     out.append(CUtilsHelper.getWrapperComment(method.getArguments(), object
                             .getcClassName(), method.name));
@@ -103,8 +103,8 @@ public class CMethodOut {
 
                 methodCall = methodType.emit(method, isStruct, methodHelper);
 
-                if (AdvisorWrapper.selectorHasCodeInjection(method.getSelectorName(), object.name)) {
-                    List<XCode> iCodeList = AdvisorWrapper.getInjectedCodeForSelector(method
+                if (AdvisorMediator.selectorHasCodeInjection(method.getSelectorName(), object.name)) {
+                    List<XCode> iCodeList = AdvisorMediator.getInjectedCodeForSelector(method
                             .getSelectorName(), object.name);
                     int index = 0;
                     while (index < iCodeList.size()) {
@@ -129,7 +129,7 @@ public class CMethodOut {
                 else {
                     if (initialInjectedCode != null)
                         out.append(initialInjectedCode);
-                    if (AdvisorWrapper.needsAutoReleasePool(method.getSelectorName(), object.name))
+                    if (AdvisorMediator.needsAutoReleasePool(method.getSelectorName(), object.name))
                         out.append(C.AUTORELEASEPOOL_ALLOC + methodCall).append(classInitializer)
                                 .append(C.AUTORELEASEPOOL_RELEASE + C.T + returnString);
                     else

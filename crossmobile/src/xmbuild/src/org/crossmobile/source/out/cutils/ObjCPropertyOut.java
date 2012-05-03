@@ -26,7 +26,7 @@ import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CProperty;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XObject;
 import org.crossmobile.source.xtype.XProperty;
 
@@ -82,7 +82,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
                 && (method.derivesFromObjC())) {
             methodCall.append(returnVariableStr);
             methodCall.append("[thiz " + CProperty.getPropertyDef(method.name) + "];");
-            if (AdvisorWrapper.isCFOpaqueType(method.getReturnType().toString()))
+            if (AdvisorMediator.isCFOpaqueType(method.getReturnType().toString()))
                 methodCall.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
                         + ", objCObj);");
         } else
@@ -104,16 +104,17 @@ public class ObjCPropertyOut extends CAnyMethodOut {
     private String getSetterCode(CMethod method, CMethodHelper methodHelper) {
         String accString = "";
         StringBuilder objCCall = new StringBuilder();
-        String beginListConversion = "";
-        String releaseList = "";
+        String beginVarConversion = "";
+        String releaseVar = "";
         StringBuilder methodCode = new StringBuilder();
 
-        if (AdvisorWrapper.needsAccumulator(object.name)
-                || AdvisorWrapper.needsReplacer(object.name)) {
+        if (AdvisorMediator.classHasRetainPolicy(object.name)
+                || AdvisorMediator.classHasReplacePolicy(object.name)) {
             accString = injectAccumulatorReplacerCode(method.name);
         }
 
-        methodCode.append(C.XMLVM_VAR_THIZ + C.N);
+        methodCode.append(methodHelper.getRequiredMacros(method.getArguments(), method.isStatic(),
+                false));
 
         if (method.derivesFromObjC())
             objCCall.append("[thiz " + method.name + ":");
@@ -121,12 +122,13 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             throw new RuntimeException("Setter does not derive from objective C!");
 
         List<CArgument> arg = method.getArguments();
+        String argType = arg.get(0).getType().toString();
         if ((arg.isEmpty()) || (arg.size() > 1))
             throw new RuntimeException("Argument list is empty or more thn 1");
 
-        if (arg.get(0).getType().toString().equals("List")) {
-            beginListConversion = CMethodHelper.getCodeToConvertToNSArray(1);
-            releaseList = CMethodHelper.getCodeToReleaseList(1);
+        if (CMethodHelper.requiresConversion(argType)) {
+            beginVarConversion = CMethodHelper.getCodeToConvertVariables(1, argType);
+            releaseVar = CMethodHelper.getCodeToReleaseVar(1);
         }
 
         if (!methodHelper.ignore(arg.get(0).getType().toString()))
@@ -135,8 +137,8 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             return null;
 
         objCCall.append("];");
-        methodCode.append(beginListConversion).append(objCCall).append(accString).append(
-                releaseList + C.N);
+        methodCode.append(beginVarConversion).append(objCCall).append(accString).append(
+                releaseVar + C.N);
 
         return methodCode.toString();
     }
@@ -149,7 +151,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
     protected String injectAccumulatorReplacerCode(String methodName) {
         XProperty prop = null;
         String accString = "";
-        XObject obj = AdvisorWrapper.getSpecialClass(object.name);
+        XObject obj = AdvisorMediator.getSpecialClass(object.name);
         if ((prop = obj.getPropertyInstance(CProperty.getPropertyDef(methodName))) != null) {
             if (prop.isRetain())
                 accString = getAccumulativeCode(1, prop.getType());

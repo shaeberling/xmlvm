@@ -29,7 +29,7 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 
 /**
  * This class servers as a helper class for wrapper generation of the methods.
@@ -60,16 +60,16 @@ public class CMethodHelper {
      * @return 'return statement' for a particular method
      */
     public String getReturnString(String retType, StringBuilder classInitializer) {
-        if (!ignore(retType)) {
+        if (!ignore(retType) && !retType.contains("[]")) {
             if (retType.equals("Object"))
                 return "return xmlvm_get_associated_c_object (objCObj);";
             else if (Advisor.isNativeType(retType))
                 return "return objCObj;";
             else if (CStruct.isStruct(retType))
                 return "return from" + retType + "(objCObj);";
-            else if (retType.equals("String"))
-                return "return fromNSString (objCObj);";
-            else if (retType.equals("List"))
+            else if (requiresConversion(retType))
+                return "return from" + getMappedDataType(retType) + "(objCObj);";
+            else if (AdvisorMediator.isCFOpaqueType(retType))
                 return "return jvar;";
             else {
                 if (!retType.equals("Class"))
@@ -94,15 +94,14 @@ public class CMethodHelper {
      * @return true if class is ignored; false otherwise.
      */
     boolean ignore(String name) {
-        // Array not handled yet!
         if (name.contains("Reference"))
             return true;
-        else if (name.contains("[]")
+        else if ((name.contains("[]") && !Advisor.isNativeType(name.replace("[]", "")))
+                || name.contains("[][]")
                 || name.contains("...")
                 || Advisor.isInIgnoreList(name)
                 || (lib.getObjectIfPresent(name) != null && lib.getObjectIfPresent(name)
-                        .isProtocol()) || name.equals("Map") || name.equals("Set")
-                || AdvisorWrapper.getOpaqueBaseType(name) != null)
+                        .isProtocol()) || name.equals("Map"))
             return true;
         else
             return false;
@@ -144,8 +143,8 @@ public class CMethodHelper {
      * @return - returns processed string for a particular argument
      */
     public String parseArgumentType(String argType, int i) {
-        if (argType.equals("List")) {
-            return "ObjCArr" + i;
+        if (requiresConversion(argType)) {
+            return "ObjCVar" + i;
         } else if (argType.equals("Object")) {
             return "((" + COut.packageName + "NSObject*) n" + i + ")->fields." + COut.packageName
                     + "NSObject.wrappedObj";
@@ -153,12 +152,28 @@ public class CMethodHelper {
             return "n" + i;
         } else if (CStruct.isStruct(argType)) {
             return "to" + argType + "(n" + i + ")";
-        } else if (argType.contains("String")) {
-            return "toNSString" + "(n" + i + ")";
+        } else if (AdvisorMediator.isCFOpaqueType(argType)) {
+            return "var" + i;
+        } else if (isSingleArray(argType)) {
+            return "a" + i + "->fields.org_xmlvm_runtime_XMLVMArray.array_";
         } else {
             return "(" + argType + "*) (((" + COut.packageName + argType + "*) n" + i
                     + ")->fields." + COut.packageName + "NSObject.wrappedObj)";
         }
+    }
+
+    private static boolean isSingleArray(String argType) {
+        return (Advisor.isNativeType(argType.replace("[]", "")) && argType.contains("[]")) ? true
+                : false;
+    }
+
+    public static boolean requiresConversion(String dataType) {
+        // Need a better way to segregate these types. These are the types that
+        // use to* and from* methods for conversion between Java and ObjectiveC
+        // objects.
+        return (dataType.equals("List") || dataType.equals("Set") || dataType.equals("String")
+                || dataType.equals("NSArray") || dataType.equals("NSSet") || dataType
+                .equals("NSString")) ? true : false;
     }
 
     /**
@@ -177,7 +192,7 @@ public class CMethodHelper {
                 return null;
             return mappedType;
         } else {
-            if (AdvisorWrapper.isCFOpaqueType(dataType)) {
+            if (AdvisorMediator.isCFOpaqueType(dataType)) {
                 return dataType + "Ref";
             }
             return dataType;
@@ -201,9 +216,9 @@ public class CMethodHelper {
             else
                 return null;
 
-            if (!(Advisor.isNativeType(returnType) || CStruct.isStruct(returnType) || AdvisorWrapper
+            if (!(Advisor.isNativeType(returnType) || CStruct.isStruct(returnType) || AdvisorMediator
                     .getOpaqueBaseType(returnType) != null)
-                    || returnType.equals("Object") || returnType.equals("List"))
+                    || returnType.equals("Object") || requiresConversion(returnType))
                 returnVariable.append("*");
 
             returnVariable.append(" objCObj = ");
@@ -212,56 +227,58 @@ public class CMethodHelper {
         return returnVariable.toString();
     }
 
-    public static String getCodeToReleaseList(int i) {
-        return C.NT + "[ObjCArr" + i + " release];" + C.N;
+    public static String getCodeToReleaseVar(int i) {
+        return C.NT + "[ObjCVar" + i + " release];" + C.N;
+    }
+
+    public static String getCodeToConvertVariables(int i, String argType) {
+        String ObjCDataType = getMappedDataType(argType);
+        return (ObjCDataType + " * ObjCVar" + i + " = to" + ObjCDataType + "(n" + i + ");" + C.NT);
     }
 
     /**
-     * In case an argument is a list, thn it needs to be converted to ObjC
-     * NSArray before the actual ObjC call
+     * Helper method to generate required macros for a method
      * 
-     * @param i
-     *            - index for the argument
-     * @return - returns the code required for conversion to NSArray
-     */
-    public static String getCodeToConvertToNSArray(int i) {
-        StringBuilder listConverionCode = new StringBuilder();
-        listConverionCode
-                .append("NSMutableArray* ObjCArr" + i + "= [[NSMutableArray alloc] init];");
-        listConverionCode
-                .append(C.NT + "int size" + i + " = XMLVMUtil_ArrayList_size(n" + i + ");");
-        listConverionCode.append(C.NT + "for (int i = 0; i < size" + i + "; i++) {");
-        listConverionCode.append(C.NTT + COut.packageName
-                + "NSObject* jobj = XMLVMUtil_ArrayList_get(n" + i + ", i);");
-        listConverionCode.append(C.NTT + "NSObject* ObjCObj = jobj->fields." + COut.packageName
-                + "NSObject.wrappedObj;");
-        listConverionCode.append(C.NTT + "[ObjCArr" + i + " addObject: ObjCObj];" + C.NT + "}"
-                + C.NT);
-        return listConverionCode.toString();
-    }
-
-    /**
      * @param arguments
-     * @param b
+     *            - List of arguments for a method
+     * @param isStatic
+     *            - true if static method
+     * @param isConstructor
+     *            - true if the method is a constructor
      */
-    public String getRequiredMacros(List<CArgument> arguments, boolean isStatic) {
+    public String getRequiredMacros(List<CArgument> arguments, boolean isStatic,
+            boolean isConstructor) {
         StringBuilder macros = new StringBuilder("");
         int i = 1;
-        if (!isStatic) {
-            if (AdvisorWrapper.isCFOpaqueType(objectName))
+
+        if (!isStatic && !isConstructor) {
+            if (AdvisorMediator.isCFOpaqueType(objectName))
                 macros.append(C.XMLVM_VAR_CFTHIZ + C.NT);
             else if (!CStruct.isStruct(objectName))
                 macros.append(C.XMLVM_VAR_THIZ + C.NT);
         }
         for (CArgument a : arguments) {
-            i++;
-            if (AdvisorWrapper.isCFOpaqueType(a.getType().toString())) {
-                macros.append("XMLVM_VAR_IOS_REF" + "(" + a.getType().getProcessedName() + ", ");
+            if (AdvisorMediator.isCFOpaqueType(a.getType().toString())) {
+                macros.append("XMLVM_VAR_IOS_REF" + "(" + a.getType().toString() + ", ");
                 macros.append("var" + i + ", ");
                 macros.append("n" + i);
                 macros.append(");").append(C.NT);
+            } else if (isSingleArray(a.getType().toString())) {
+                macros.append("XMLVM_VAR_" + a.getType().toString().replace("[]", "").toUpperCase()
+                        + "_ARRAY(a" + i + ", n" + i + "); " + C.NT);
             }
+            i++;
         }
         return macros.toString();
+    }
+
+    /**
+     * @param type
+     *            - data type of the property for a setter method
+     * @return - true if the type is a protocol (delegate); false otherwise.
+     */
+    public boolean isDelegateProperty(String type) {
+        return lib.getObjectIfPresent(type) != null ? lib.getObjectIfPresent(type).isProtocol()
+                : false;
     }
 }

@@ -36,8 +36,7 @@ import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CStruct;
 import org.crossmobile.source.guru.Advisor;
-import org.crossmobile.source.out.COut;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 
 /**
  * This class is used to generate code for the constructors for classes as well
@@ -140,11 +139,11 @@ public class CConstructorOut {
             out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), con
                     .isOverloaded(), cEnum == null ? null : cEnum.name));
 
-            if (AdvisorWrapper.needsAutoReleasePool(con.getSelectorName(), object.name))
+            if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
                 out.append(C.AUTORELEASEPOOL_ALLOC);
 
-            if (isStruct) {
-                emitStructConstructor(arguments);
+            if (isStruct || AdvisorMediator.isCFOpaqueType(object.name)) {
+                emitStructConstructor(arguments, AdvisorMediator.isCFOpaqueType(object.name));
             } else {
                 if (arguments.isEmpty())
                     has_default_constructor = true;
@@ -154,7 +153,7 @@ public class CConstructorOut {
                 else
                     emitObjectConstructor(con.getNameParts(), arguments);
             }
-            if (AdvisorWrapper.needsAutoReleasePool(con.getSelectorName(), object.name))
+            if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
                 out.append(C.AUTORELEASEPOOL_RELEASE);
             out.append(C.END_WRAPPER + C.N);
         }
@@ -198,37 +197,46 @@ public class CConstructorOut {
      *            - List of arguments
      * @throws IOException
      */
-    private void emitStructConstructor(List<CArgument> arguments) throws IOException {
+    private void emitStructConstructor(List<CArgument> arguments, boolean isCFOpaqueType)
+            throws IOException {
         boolean isFirst = true;
         int i = 1;
 
-        out.append(C.NT + object.name + " objCObj = " + object.name + "Make(");
+        out.append(methodHelper.getRequiredMacros(arguments, false, true));
+
+        if (isCFOpaqueType)
+            out.append(C.NT + object.name + "Ref objCObj = " + object.name + "Create(");
+        else
+            out.append(C.NT + object.name + " objCObj = " + object.name + "Make(");
 
         for (CArgument arg : arguments) {
             if (!isFirst)
                 out.append(",");
             isFirst = false;
 
-            if (Advisor.isNativeType(arg.getType().toString())) {
-                out.append("n" + (i++));
-            } else if (CStruct.isStruct(arg.getType().toString()))
-                out.append("to" + arg.getType().toString() + "(n" + (i++) + ")");
-            else
-                out.append(object.getcClassName() + "* n" + (i++) + ")->fields." + COut.packageName
-                        + "NSObject.wrappedObj");
+            out.append(methodHelper.parseArgumentType(arg.getType().toString(), i));
+            i++;
         }
         out.append(");" + C.NT);
 
-        out.append(object.getcClassName() + "* jObj = me;" + C.N);
+        if (isCFOpaqueType) {
+            emitCallToInternalConstructor();
+        } else {
+            out.append(object.getcClassName() + "* jObj = me;" + C.N);
 
-        for (CArgument arg : object.getVariables()) {
-            out.append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name + "_ = ");
-            if (Advisor.isNativeType(arg.getType().toString())) {
-                out.append("objCObj." + arg.name + ";" + C.N);
-            } else if (CStruct.isStruct(arg.getType().toString()))
-                out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");" + C.N);
-            else
-                out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");" + C.N);
+            for (CArgument arg : object.getVariables()) {
+                out
+                        .append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name
+                                + "_ = ");
+                if (Advisor.isNativeType(arg.getType().toString())) {
+                    out.append("objCObj." + arg.name + ";" + C.N);
+                } else if (CStruct.isStruct(arg.getType().toString()))
+                    out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");"
+                            + C.N);
+                else
+                    out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");"
+                            + C.N);
+            }
         }
     }
 
@@ -250,11 +258,12 @@ public class CConstructorOut {
         boolean flag = true;
         boolean implemented = true;
         StringBuilder methodCode = new StringBuilder();
-        StringBuilder beginListConversion = new StringBuilder("");
-        StringBuilder releaseList = new StringBuilder("");
+        StringBuilder beginVarConversion = new StringBuilder("");
+        StringBuilder releaseVar = new StringBuilder("");
 
-        objCCall
-                .append(C.NT + object.name + "* objCObj = [[" + objectToBeInitialized() + " alloc]");
+        objCCall.append(methodHelper.getRequiredMacros(arguments, false, true));
+        objCCall.append(C.NT + object.name + "* ");
+        objCCall.append("objCObj = [[" + objectToBeInitialized() + " alloc]");
 
         ListIterator<CArgument> iterator = arguments.listIterator();
 
@@ -264,15 +273,16 @@ public class CConstructorOut {
                 if (iterator.hasNext()) {
 
                     CArgument argument = (CArgument) iterator.next();
+                    argType = argument.getType().toString();
                     String parsedArg = null;
 
-                    if (argument.getType().toString().equals("List")) {
-                        beginListConversion.append(CMethodHelper.getCodeToConvertToNSArray(i));
-                        releaseList.append(CMethodHelper.getCodeToReleaseList(i));
+                    if (CMethodHelper.requiresConversion(argType)) {
+                        beginVarConversion.append(CMethodHelper.getCodeToConvertVariables(i,
+                                argType));
+                        releaseVar.append(CMethodHelper.getCodeToReleaseVar(i));
                     }
 
                     objCCall.append(" " + namePart + ":");
-                    argType = argument.getType().toString();
 
                     if (!methodHelper.ignore(argType)
                             && (parsedArg = methodHelper.parseArgumentType(argType, i)) != null) {
@@ -294,7 +304,7 @@ public class CConstructorOut {
         if (implemented) {
             if (flag == true)
                 objCCall.append("];");
-            methodCode.append(beginListConversion).append(objCCall).append(releaseList + C.N);
+            methodCode.append(beginVarConversion).append(objCCall).append(releaseVar + C.N);
             out.append(methodCode);
             emitCallToInternalConstructor();
         } else {
@@ -311,7 +321,7 @@ public class CConstructorOut {
     private void emitDefaultConstructor(boolean isStruct) throws IOException {
         out.append(C.BEGIN_WRAPPER + "[" + object.getcClassName() + "___INIT___");
         out.append("]" + C.N);
-        if (AdvisorWrapper.isCFOpaqueType(object.name) || object.name.equals("CFType"))
+        if (AdvisorMediator.isCFOpaqueType(object.name) || object.name.equals("CFType"))
             out.append(C.NOT_IMPLEMENTED + C.N);
         else if (!isStruct) {
             out.append(C.T + objectToBeInitialized()).append("* objCObj = [[");
@@ -328,7 +338,7 @@ public class CConstructorOut {
     }
 
     private String objectToBeInitialized() {
-        return AdvisorWrapper.classHasDelegateMethods(object.name) ? object.name + "Wrapper"
+        return AdvisorMediator.classHasDelegateMethods(object.name) ? object.name + "Wrapper"
                 : object.name;
     }
 }

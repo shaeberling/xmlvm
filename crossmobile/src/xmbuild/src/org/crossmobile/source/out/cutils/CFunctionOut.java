@@ -25,7 +25,7 @@ import java.util.List;
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 
 /**
  * This class is used to get the code that is related to the methods which are C
@@ -60,21 +60,33 @@ public class CFunctionOut extends CAnyMethodOut {
         String argList = null;
         String tempName = null;
         String returnVariableStr = null;
+        StringBuilder beginVarConversion = new StringBuilder("");
+        StringBuilder releaseVar = new StringBuilder("");
+        int i = 1;
 
-        if (method.isStatic() || parentIsStruct || AdvisorWrapper.isCFOpaqueType(object.name)) {
+        if (method.isStatic() || parentIsStruct || AdvisorMediator.isCFOpaqueType(object.name)) {
 
             List<CArgument> arguments = method.getArguments();
-            methodCall.append(methodHelper.getRequiredMacros(arguments, method.isStatic()));
+            methodCall.append(methodHelper.getRequiredMacros(arguments, method.isStatic(), false));
 
-            // if (isCFOpaqueType && !method.isStatic())
-            // methodCall.append(C.XMLVM_VAR_CFTHIZ + C.N);
+            for (CArgument arg : arguments) {
+                if (CMethodHelper.requiresConversion(arg.getType().toString())) {
+                    beginVarConversion.append(CMethodHelper.getCodeToConvertVariables(i, arg
+                            .getType().toString()));
+                    releaseVar.append(CMethodHelper.getCodeToReleaseVar(i));
+                }
+                i++;
+            }
+
+            methodCall.append(beginVarConversion + C.NT);
+
             if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType()
                     .toString())) != null)
                 methodCall.append(returnVariableStr);
             else
                 return null;
 
-            if (parentIsStruct || AdvisorWrapper.isCFOpaqueType(object.name)) {
+            if (parentIsStruct || AdvisorMediator.isCFOpaqueType(object.name)) {
                 methodCall.append(methodHelper.getModifiedFunctionName(method.name, true));
                 argList = getArgumentsToPass(arguments, method.isStatic(), parentIsStruct,
                         methodHelper);
@@ -86,16 +98,17 @@ public class CFunctionOut extends CAnyMethodOut {
                 argList = getArgumentsToPass(arguments, method.isStatic(), false, methodHelper);
             }
 
-        } else {
+        } else
             return null;
-        }
+
         if (argList == null)
             return null;
 
-        methodCall.append(argList + ";" + C.N);
-        if (AdvisorWrapper.isCFOpaqueType(method.getReturnType().toString()))
-            methodCall.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
-                    + ", objCObj);");
+        methodCall.append(argList + ";" + C.NT);
+        methodCall.append(releaseVar);
+        if (AdvisorMediator.isCFOpaqueType(method.getReturnType().toString()))
+            methodCall.append(C.T + "XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
+                    + ", objCObj);" + C.N);
         return methodCall.toString();
     }
 
@@ -125,9 +138,10 @@ public class CFunctionOut extends CAnyMethodOut {
         argList.append("(");
 
         if (!isStatic) {
+
             if (parentIsStruct)
                 argList.append("to" + object.name + "(me)");
-            else if (AdvisorWrapper.getOpaqueBaseType(object.name) != null)
+            else if (AdvisorMediator.getOpaqueBaseType(object.name) != null)
                 argList.append("thiz");
             isFirst = false;
         }
@@ -145,8 +159,9 @@ public class CFunctionOut extends CAnyMethodOut {
                     && (parsedArg = methodHelper.parseArgumentType(argType, i)) != null) {
                 argList.append(parsedArg);
                 i++;
-            } else
+            } else {
                 return null;
+            }
         }
         argList.append(")");
         return argList.toString();

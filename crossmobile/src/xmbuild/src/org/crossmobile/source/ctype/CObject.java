@@ -29,7 +29,7 @@ import org.crossmobile.source.guru.Oracle;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.parser.Stream;
 import org.crossmobile.source.utils.FieldHolder;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 
 public class CObject extends CAny implements FieldHolder, Serializable {
     private static final long serialVersionUID = 1L;
@@ -219,7 +219,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
                 }
                 list.add(m);
             }
-            m.setMandatory(AdvisorWrapper.methodIsMandatoryForObject(m.getSelectorName(), this.name));
+            m.setMandatory(AdvisorMediator.methodIsMandatoryForObject(m.getSelectorName(), this.name));
         }
 
         // find conflicting methods
@@ -248,7 +248,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
         for (CMethod m : toRemove)
             methods.remove(m);
         
-        if(AdvisorWrapper.objectHasMandatoryMethods(this.name))
+        if(AdvisorMediator.objectHasMandatoryMethods(this.name))
             hasMandatoryMethods  = true;
     }
 

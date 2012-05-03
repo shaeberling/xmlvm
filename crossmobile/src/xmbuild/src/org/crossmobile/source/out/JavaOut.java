@@ -39,7 +39,7 @@ import org.crossmobile.source.guru.Reporter.Tuplet;
 import org.crossmobile.source.out.cutils.ObjCSelectorUtil;
 import org.crossmobile.source.utils.FileUtils;
 import org.crossmobile.source.utils.WriteCallBack;
-import org.crossmobile.source.xtype.AdvisorWrapper;
+import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XInjectedMethod;
 
@@ -122,7 +122,7 @@ public class JavaOut implements Generator {
             out.append(objectprefix);
 
         List<String> references = null;
-        if(!isAdapterImpl && (references = AdvisorWrapper.getReferencesForObject(object.name)) != null){
+        if(!isAdapterImpl && (references = AdvisorMediator.getReferencesForObject(object.name)) != null){
             out.append("(references={");
             for(int i=0; i<references.size(); i++){
                 out.append(references.get(i) + ".class");
@@ -139,7 +139,7 @@ public class JavaOut implements Generator {
         } else if (object.isProtocol()) {
             type = object.hasOptionalMethod() ? "abstract class" : "interface";
             out.append("@org.xmlvm.XMLVMDelegate(protocolType = \"" + object.getName() + "\")\n");
-        } else if (AdvisorWrapper.classHasDelegateMethods(object.name)) {
+        } else if (AdvisorMediator.classHasDelegateMethods(object.name)) {
             out.append("@org.xmlvm.XMLVMDelegate\n");
         }
         
@@ -168,7 +168,7 @@ public class JavaOut implements Generator {
             out.append(" implements ").append(library.getPackagename() +".").append(object.name);
         }
         
-        String opaqueBaseType = AdvisorWrapper.getOpaqueBaseType(object.name);
+        String opaqueBaseType = AdvisorMediator.getOpaqueBaseType(object.name);
         if(opaqueBaseType != null)
             out.append(" extends ").append(opaqueBaseType);   // Eg CFType
 
@@ -208,7 +208,7 @@ public class JavaOut implements Generator {
         if (object.hasStaticMethods()) {
             out.append("\n\t/*\n\t * Static methods\n\t */\n");
             for (CMethod m : object.getMethods())
-                if (m.isStatic() && !AdvisorWrapper.methodIsIgnore(m.getSelectorName(), object.name)) {
+                if (m.isStatic() && !AdvisorMediator.methodIsIgnore(m.getSelectorName(), object.name)) {
                     if(isAdapterImpl)
                         parseMethod(object, m, library, true, out);
                     else
@@ -250,7 +250,7 @@ public class JavaOut implements Generator {
         if (object.hasInstanceMethods()) {
             out.append("\n\t/*\n\t * Instance methods\n\t */\n");
             for (CMethod m : object.getMethods())
-                if ((!m.isStatic() && !m.isProperty()) && !AdvisorWrapper.methodIsIgnore(m.getSelectorName(), object.name)) {
+                if ((!m.isStatic() && !m.isProperty()) && !AdvisorMediator.methodIsIgnore(m.getSelectorName(), object.name)) {
                     if(isAdapterImpl)
                         parseMethod(object, m, library, true, out);
                     else
@@ -258,9 +258,9 @@ public class JavaOut implements Generator {
                 }
         }
         
-        if (AdvisorWrapper.classHasExternallyInjectedCode(object.name)){
+        if (AdvisorMediator.classHasExternallyInjectedCode(object.name)){
             out.append("\n\t/*\n\t * Injected methods\n\t */\n");
-            List<XInjectedMethod> iMethods = AdvisorWrapper.getExternallyInjectedCode(object.name);
+            List<XInjectedMethod> iMethods = AdvisorMediator.getExternallyInjectedCode(object.name);
             for (XInjectedMethod im : iMethods){
                 parseInjectedMethods(object, im, out);
             }
@@ -379,7 +379,7 @@ public class JavaOut implements Generator {
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
         if ((parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl) || 
-                 AdvisorWrapper.isDelegateMethod(m.getSelectorName(), parent.name)) {
+                 AdvisorMediator.isDelegateMethod(m.getSelectorName(), parent.name)) {
             String selectorDefinition = m.getDefinitions().get(0);
             ObjCSelector selector = ObjCSelectorUtil.toObjCSelector(selectorDefinition);
             if (selector == null) {
@@ -396,20 +396,20 @@ public class JavaOut implements Generator {
             out.append("abstract ");
         
         String name = m.isProperty() ? CProperty.getPropertyDef(m.name) : m.getSelectorName();
-        if (AdvisorWrapper.hasSpecialReturnType(name, parent.name, m.isProperty())
+        if (AdvisorMediator.hasSpecialReturnType(name, parent.name, m.isProperty())
                 && (!m.isProperty() || (m.isProperty() && m.getArguments().isEmpty()))) //getter
             parseSpecialReturnType(name, parent.name, m.isProperty(), out);
         else
             parseType(m.getReturnType(), false, getPackageName(m.getReturnType(), lib), out);
         out.append(" ").append(m.getCanonicalName()).append("(");
         
-        if(AdvisorWrapper.hasSpecialArgumentsDefined(name, parent.name, m.isProperty())
+        if(AdvisorMediator.hasSpecialArgumentsDefined(name, parent.name, m.isProperty())
                 && (!m.isProperty() || (m.isProperty() && !m.getArguments().isEmpty()))) //setter
             parseSpecialArgumentList(name, parent.name, m.isProperty(), out);
         else
             parseArgumentList(m.getArguments(), parent, null, lib, out);
         
-        if(isAdapterImpl && !AdvisorWrapper.methodIsMandatoryForObject(m.getSelectorName(), parent.name)) {
+        if(isAdapterImpl && !AdvisorMediator.methodIsMandatoryForObject(m.getSelectorName(), parent.name)) {
             out.append(")");
             parseInterfaceImplementationBody(parent, m, out);
         }
@@ -420,9 +420,9 @@ public class JavaOut implements Generator {
     private void parseSpecialReturnType(String name, String parent, boolean isProperty, Writer out)
             throws IOException {
         if (isProperty) {
-            out.append(AdvisorWrapper.getPropertyType(name, parent));
+            out.append(AdvisorMediator.getPropertyType(name, parent));
         } else {
-            out.append(AdvisorWrapper.getSelectorReturnType(name, parent));
+            out.append(AdvisorMediator.getSelectorReturnType(name, parent));
         }
 
     }
@@ -447,9 +447,9 @@ public class JavaOut implements Generator {
     private void parseSpecialArgumentList(String name, String parent, boolean isProperty, Writer out)
             throws IOException {
         if (isProperty) {
-            out.append(AdvisorWrapper.getPropertyType(name, parent) + " arg0");
+            out.append(AdvisorMediator.getPropertyType(name, parent) + " arg0");
         } else {
-            List<XArg> args = AdvisorWrapper.getArgumentsForMethod(name, parent);
+            List<XArg> args = AdvisorMediator.getArgumentsForMethod(name, parent);
             int size = args.size();
             for (int i = 0; i < args.size(); i++) {
                 out.append(args.get(i).getType() + " arg" + i);
@@ -475,7 +475,7 @@ public class JavaOut implements Generator {
         CType returnType = method.getReturnType();
         String defaultReturnValue = null;
 
-        if ((defaultReturnValue = AdvisorWrapper.getDefaultReturnValue(method.getSelectorName(),
+        if ((defaultReturnValue = AdvisorMediator.getDefaultReturnValue(method.getSelectorName(),
                 parent.name)) != null)
             out.append("{\n\t\treturn ").append(defaultReturnValue).append(";\n\t}");
         else if (returnType.toString().equals("void"))
