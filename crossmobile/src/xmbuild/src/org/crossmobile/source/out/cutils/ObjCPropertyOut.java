@@ -26,6 +26,7 @@ import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CProperty;
+import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XObject;
 import org.crossmobile.source.xtype.XProperty;
@@ -106,6 +107,7 @@ public class ObjCPropertyOut extends CAnyMethodOut {
         StringBuilder objCCall = new StringBuilder();
         String beginVarConversion = "";
         String releaseVar = "";
+        String initDelegateWrapper = "";
         StringBuilder methodCode = new StringBuilder();
 
         if (AdvisorMediator.classHasRetainPolicy(object.name)
@@ -131,16 +133,37 @@ public class ObjCPropertyOut extends CAnyMethodOut {
             releaseVar = CMethodHelper.getCodeToReleaseVar(1);
         }
 
-        if (!methodHelper.ignore(arg.get(0).getType().toString()))
+        if (methodHelper.isDelegateProperty(arg.get(0).getType().toString())) {
+            initDelegateWrapper = initDelegateWrapper(arg.get(0));
+            objCCall.append("jwrapper->nativeDelegateWrapper_");
+        } else if (!methodHelper.ignore(arg.get(0).getType().toString()))
             objCCall.append(methodHelper.parseArgumentType(arg.get(0).getType().toString(), 1));
         else
             return null;
 
         objCCall.append("];");
-        methodCode.append(beginVarConversion).append(objCCall).append(accString).append(
-                releaseVar + C.N);
+        methodCode.append(beginVarConversion).append(initDelegateWrapper).append(objCCall).append(
+                accString).append(releaseVar + C.N);
 
         return methodCode.toString();
+    }
+
+    /**
+     * If the setter is for delegate property then the delegate wrapper object
+     * has to be initialized and the reference has to be stored.
+     * 
+     * @param delegate
+     *            - Argument to setter - which is a delegate
+     * @return - string for initializing the delegate wrapper object
+     */
+    private String initDelegateWrapper(CArgument delegate) {
+        StringBuilder initializer = new StringBuilder("");
+        String delegateClassName = COut.packageName + delegate.getType().toString();
+        initializer.append(delegateClassName
+                + "_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_" + delegateClassName
+                + "(n1);" + C.NT);
+        initializer.append("[jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];" + C.NT);
+        return initializer.toString();
     }
 
     /**
