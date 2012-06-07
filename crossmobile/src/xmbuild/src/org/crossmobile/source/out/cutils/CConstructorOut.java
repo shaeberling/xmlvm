@@ -68,12 +68,12 @@ public class CConstructorOut {
      *            - Indicates if the constructor is generated for structs
      * @throws IOException
      */
-    public void emitConstructors(boolean isStruct) throws IOException {
-        emitConstructors(isStruct, object, null);
+    public void emitConstructors() throws IOException {
+        emitConstructors(object, null);
         Map<String, Boolean> subclassArgTypes = new HashMap<String, Boolean>();
         for (CConstructor c : object.getConstructors())
             subclassArgTypes.put(c.getCommaSeparatedArgumentTypes(), true);
-        emitSuperClassConstructor(isStruct, object, subclassArgTypes);
+        emitSuperClassConstructor(object, subclassArgTypes);
     }
 
     /**
@@ -94,17 +94,17 @@ public class CConstructorOut {
      *            that in subclass
      * @throws IOException
      */
-    private void emitSuperClassConstructor(boolean isStruct, CObject currentObj,
-            Map<String, Boolean> subclassArgTypes) throws IOException {
+    private void emitSuperClassConstructor(CObject currentObj, Map<String, Boolean> subclassArgTypes)
+            throws IOException {
         if (currentObj.getSuperclass() != null) {
             CObject superclass = library.getObjectIfPresent(currentObj.getSuperclass()
                     .getProcessedName());
 
-            emitConstructors(isStruct, superclass, subclassArgTypes);
+            emitConstructors(superclass, subclassArgTypes);
             if (superclass.getSuperclass() != null) {
                 for (CConstructor c : superclass.getConstructors())
                     subclassArgTypes.put(c.getCommaSeparatedArgumentTypes(), true);
-                emitSuperClassConstructor(isStruct, superclass, subclassArgTypes);
+                emitSuperClassConstructor(superclass, subclassArgTypes);
             }
         }
     }
@@ -116,8 +116,8 @@ public class CConstructorOut {
      *            - Indicates if the constructor is generated for structs
      * @throws IOException
      */
-    private void emitConstructors(boolean isStruct, CObject currentObj,
-            Map<String, Boolean> subclassArgType) throws IOException {
+    private void emitConstructors(CObject currentObj, Map<String, Boolean> subclassArgType)
+            throws IOException {
 
         boolean has_default_constructor = false;
         List<CArgument> arguments = null;
@@ -126,40 +126,63 @@ public class CConstructorOut {
 
         for (CConstructor con : currentObj.getConstructors()) {
 
-            if (subclassArgType != null
-                    && subclassArgType.containsKey(con.getCommaSeparatedArgumentTypes()))
+            StringBuilder initialInjectedCode = new StringBuilder();
+            StringBuilder replaceableCode = new StringBuilder();
+            StringBuilder finalInjectedCode = new StringBuilder();
+
+            CMethodHelper.setCodeForInjection(con.getSelectorName(), object.name, true,
+                    initialInjectedCode, replaceableCode, finalInjectedCode);
+
+            if (!replaceableCode.toString().isEmpty()) {
+                out.append(replaceableCode);
                 continue;
-
-            arguments = con.getArguments();
-
-            cEnum = con.getEnum();
-            if (cEnum != null)
-                namePartsMap = cEnum.getNameParts();
-
-            out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(), con
-                    .isOverloaded(), cEnum == null ? null : cEnum.name));
-
-            if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
-                out.append(C.AUTORELEASEPOOL_ALLOC);
-
-            if (isStruct || AdvisorMediator.isCFOpaqueType(object.name)) {
-                emitStructConstructor(arguments, AdvisorMediator.isCFOpaqueType(object.name));
-            } else {
-                if (arguments.isEmpty())
-                    has_default_constructor = true;
-
-                if (con.isOverloaded() && cEnum != null)
-                    emitOverloadedConstructor(cEnum.name, namePartsMap, arguments);
-                else
-                    emitObjectConstructor(con.getNameParts(), arguments);
             }
-            if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
-                out.append(C.AUTORELEASEPOOL_RELEASE);
-            out.append(C.END_WRAPPER + C.N);
+
+            if (!AdvisorMediator.methodIsIgnore(con.getSelectorName(), object.name)) {
+                if (subclassArgType != null
+                        && subclassArgType.containsKey(con.getCommaSeparatedArgumentTypes()))
+                    continue;
+
+                arguments = con.getArguments();
+
+                cEnum = con.getEnum();
+                if (cEnum != null)
+                    namePartsMap = cEnum.getNameParts();
+
+                if (!initialInjectedCode.toString().isEmpty())
+                    out.append(initialInjectedCode);
+
+                out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(),
+                        cEnum == null ? null : cEnum.name));
+
+                if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
+                    out.append(C.AUTORELEASEPOOL_ALLOC);
+
+                if (CStruct.isStruct(currentObj.name)
+                        || AdvisorMediator.isCFOpaqueType(object.name)) {
+                    emitStructConstructor(arguments, AdvisorMediator.isCFOpaqueType(object.name));
+                } else {
+                    if (arguments.isEmpty())
+                        has_default_constructor = true;
+
+                    if (con.isOverloaded() && cEnum != null)
+                        emitOverloadedConstructor(cEnum.name, namePartsMap, arguments);
+                    else
+                        emitObjectConstructor(con.getNameParts(), arguments);
+                }
+                if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
+                    out.append(C.AUTORELEASEPOOL_RELEASE);
+
+                if (!finalInjectedCode.toString().isEmpty())
+                    out.append(finalInjectedCode);
+
+                out.append(C.END_WRAPPER + C.N);
+
+            }
         }
 
         if (!has_default_constructor)
-            emitDefaultConstructor(isStruct);
+            emitDefaultConstructor(CStruct.isStruct(currentObj.name));
     }
 
     /**
@@ -201,43 +224,53 @@ public class CConstructorOut {
             throws IOException {
         boolean isFirst = true;
         int i = 1;
+        String setReferenceObj = null;
+        StringBuilder code = new StringBuilder();
 
-        out.append(methodHelper.getRequiredMacros(arguments, false, true));
+        code.append(CMethodHelper.getRequiredMacros(object.name, arguments, false, true));
 
         if (isCFOpaqueType)
-            out.append(C.NT + object.name + "Ref objCObj = " + object.name + "Create(");
+            code.append(C.NT + object.name + "Ref var0 = " + object.name + "Create(");
         else
-            out.append(C.NT + object.name + " objCObj = " + object.name + "Make(");
+            code.append(C.NT + object.name + " var0 = " + object.name + "Make(");
 
         for (CArgument arg : arguments) {
             if (!isFirst)
-                out.append(",");
+                code.append(",");
             isFirst = false;
 
-            out.append(methodHelper.parseArgumentType(arg.getType().toString(), i));
+            if (!methodHelper.ignore(arg.getType().toString()))
+                code.append(CMethodHelper.parseArgumentType(arg.getType().toString(), i));
+            else {
+                out.append(C.NOT_IMPLEMENTED);
+                return;
+            }
+
+            if (CMethodHelper.isDoublePointer(arg.getType().toString()))
+                setReferenceObj = CMethodHelper.setReferenceVariable(arg.getType(), i);
             i++;
         }
-        out.append(");" + C.NT);
+        code.append(");" + C.NT);
 
         if (isCFOpaqueType) {
-            emitCallToInternalConstructor();
+            code.append(emitCallToInternalConstructor());
         } else {
-            out.append(object.getcClassName() + "* jObj = me;" + C.N);
+            code.append(object.getcClassName() + "* jObj = me;" + C.N);
 
             for (CArgument arg : object.getVariables()) {
-                out
-                        .append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name
-                                + "_ = ");
+                code.append(C.T + "jObj->fields." + object.getcClassName() + "." + arg.name
+                        + "_ = ");
                 if (Advisor.isNativeType(arg.getType().toString())) {
-                    out.append("objCObj." + arg.name + ";" + C.N);
+                    code.append("var0." + arg.name + ";" + C.N);
                 } else if (CStruct.isStruct(arg.getType().toString()))
-                    out.append("from" + arg.getType().toString() + "(objCObj." + arg.name + ");"
+                    code.append("from" + arg.getType().toString() + "(var0." + arg.name + ");"
                             + C.N);
                 else
-                    out.append("xmlvm_get_associated_c_object(" + "objCObj." + arg.name + ");"
-                            + C.N);
+                    code.append("xmlvm_get_associated_c_object(" + "var0." + arg.name + ");" + C.N);
             }
         }
+        code.append(setReferenceObj);
+        out.append(code);
     }
 
     /**
@@ -258,12 +291,12 @@ public class CConstructorOut {
         boolean flag = true;
         boolean implemented = true;
         StringBuilder methodCode = new StringBuilder();
-        StringBuilder beginVarConversion = new StringBuilder("");
         StringBuilder releaseVar = new StringBuilder("");
+        String setReferenceObj = "";
 
-        objCCall.append(methodHelper.getRequiredMacros(arguments, false, true));
+        objCCall.append(CMethodHelper.getRequiredMacros(object.name, arguments, false, true));
         objCCall.append(C.NT + object.name + "* ");
-        objCCall.append("objCObj = [[" + objectToBeInitialized() + " alloc]");
+        objCCall.append("var0 = [[" + objectToBeInitialized() + " alloc]");
 
         ListIterator<CArgument> iterator = arguments.listIterator();
 
@@ -276,27 +309,29 @@ public class CConstructorOut {
                     argType = argument.getType().toString();
                     String parsedArg = null;
 
-                    if (CMethodHelper.requiresConversion(argType)) {
-                        beginVarConversion.append(CMethodHelper.getCodeToConvertVariables(i,
-                                argType));
+                    if (CMethodHelper.requiresConversion(argType))
                         releaseVar.append(CMethodHelper.getCodeToReleaseVar(i));
-                    }
+
+                    if (CMethodHelper.isDoublePointer(argType))
+                        setReferenceObj = CMethodHelper.setReferenceVariable(argument.getType(), i);
 
                     objCCall.append(" " + namePart + ":");
 
                     if (!methodHelper.ignore(argType)
-                            && (parsedArg = methodHelper.parseArgumentType(argType, i)) != null) {
+                            && (parsedArg = CMethodHelper.parseArgumentType(argType, i)) != null) {
+
                         objCCall.append(parsedArg);
                         i++;
                     } else {
                         objCCall.delete(0, objCCall.length());
-                        objCCall.append("XMLVM_NOT_IMPLEMENTED();" + C.N);
+                        objCCall.append(C.NOT_IMPLEMENTED + C.N);
                         implemented = false;
                         break;
                     }
                 }
             } else {
                 objCCall.append("init];" + C.N);
+                objCCall.append(setReferenceObj);
                 flag = false;
             }
         }
@@ -304,9 +339,9 @@ public class CConstructorOut {
         if (implemented) {
             if (flag == true)
                 objCCall.append("];");
-            methodCode.append(beginVarConversion).append(objCCall).append(releaseVar + C.N);
+            methodCode.append(objCCall).append(releaseVar + C.N);
             out.append(methodCode);
-            emitCallToInternalConstructor();
+            out.append(emitCallToInternalConstructor());
         } else {
             out.append(objCCall);
         }
@@ -324,17 +359,16 @@ public class CConstructorOut {
         if (AdvisorMediator.isCFOpaqueType(object.name) || object.name.equals("CFType"))
             out.append(C.NOT_IMPLEMENTED + C.N);
         else if (!isStruct) {
-            out.append(C.T + objectToBeInitialized()).append("* objCObj = [[");
+            out.append(C.T + objectToBeInitialized()).append("* var0 = [[");
             out.append(objectToBeInitialized());
             out.append(" alloc ] init];").append(C.N);
-            emitCallToInternalConstructor();
+            out.append(emitCallToInternalConstructor());
         }
         out.append(C.END_WRAPPER + C.N);
     }
 
-    private void emitCallToInternalConstructor() throws IOException {
-        out.append(C.T + object.getcClassName()).append("_INTERNAL_CONSTRUCTOR(me, objCObj);")
-                .append(C.N);
+    private String emitCallToInternalConstructor() throws IOException {
+        return C.T + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(me, var0);" + C.N;
     }
 
     private String objectToBeInitialized() {

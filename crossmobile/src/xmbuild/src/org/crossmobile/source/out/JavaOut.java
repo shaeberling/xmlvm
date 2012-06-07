@@ -19,9 +19,11 @@ package org.crossmobile.source.out;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CConstructor;
@@ -209,10 +211,7 @@ public class JavaOut implements Generator {
             out.append("\n\t/*\n\t * Static methods\n\t */\n");
             for (CMethod m : object.getMethods())
                 if (m.isStatic() && !AdvisorMediator.methodIsIgnore(m.getSelectorName(), object.name)) {
-                    if(isAdapterImpl)
-                        parseMethod(object, m, library, true, out);
-                    else
-                        parseMethod(object, m, library, false, out);
+                    parseMethod(object, null, m, library, isAdapterImpl, out);
                 }
         }
 
@@ -240,10 +239,7 @@ public class JavaOut implements Generator {
             out.append("\n\t/*\n\t * Properties\n\t */\n");
             for (CMethod m : object.getMethods())
                 if (m.isProperty()) {
-                    if(isAdapterImpl)
-                        parseMethod(object, m, library, true, out);
-                    else
-                        parseMethod(object, m, library, false, out);
+                    parseMethod(object, null, m, library, isAdapterImpl, out);
                 }
         }
 
@@ -251,10 +247,7 @@ public class JavaOut implements Generator {
             out.append("\n\t/*\n\t * Instance methods\n\t */\n");
             for (CMethod m : object.getMethods())
                 if ((!m.isStatic() && !m.isProperty()) && !AdvisorMediator.methodIsIgnore(m.getSelectorName(), object.name)) {
-                    if(isAdapterImpl)
-                        parseMethod(object, m, library, true, out);
-                    else
-                        parseMethod(object, m, library, false, out);
+                    parseMethod(object, null, m, library, isAdapterImpl, out);
                 }
         }
         
@@ -265,7 +258,66 @@ public class JavaOut implements Generator {
                 parseInjectedMethods(object, im, out);
             }
         }
+        
+        if(object.hasInterfaces()) {
+            out.append("\n\t/*\n\t * Interface Properties\n\t */\n");
+            List<CMethod> methodList = new ArrayList<CMethod>();
+            for(CMethod m : object.getMethods())
+                methodList.add(m);
+            parseInterfaceProperty(object, object.getInterfaces(), library, methodList, isAdapterImpl, out);
+        }
+        
         out.append("}\n");
+    }
+
+    /**
+     * There are instances where a class conforms to a protocol and the
+     * properties of the protocol can be accessed by the instance of the class
+     * conforming to a protocol. Eg:UITextInput conforms to UITextInputTraits.
+     * In this case, the properties of UITextInputTraits can be accessed by
+     * instance of UITextInput. Currently only properties of the protocol the
+     * class is conforming to are made available within the class. The methods
+     * of the protocol are not accessible from the class. This can be extended to
+     * handle methods as well.
+     * 
+     * @param object
+     * @param isAdapterImpl
+     * @param out
+     * @throws IOException
+     */
+    private void parseInterfaceProperty(CObject currObject, Set<CType> interfaces,
+            CLibrary library, List<CMethod> methodList, boolean isAdapterImpl, Writer out)
+            throws IOException {
+
+        boolean flag = false;
+        for (CType c : interfaces) {
+            CObject ifcObj = library.getObject(c.getProcessedName());
+
+            for (CMethod m : ifcObj.getMethods()) {
+                if (m.isProperty()) {
+                    for (CMethod im : methodList) {
+                        if (im.isProperty()
+                                && im.getDefinitions().get(0).equals(m.getDefinitions().get(0))
+                                && im.name.equals(m.name)) {
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if (flag) {
+                        flag = false;
+                        continue;
+                    }
+
+                    parseMethod(currObject, ifcObj, m, library, isAdapterImpl, out);
+                    methodList.add(m);
+                }
+            }
+            if (ifcObj.hasInterfaces()) {
+                parseInterfaceProperty(currObject, ifcObj.getInterfaces(), library, methodList,
+                        isAdapterImpl, out);
+            }
+        }
+
     }
 
     /**
@@ -365,6 +417,9 @@ public class JavaOut implements Generator {
             if (!parm.getType().isPointer()) {
                 sb.append(", isStruct = true");
             }
+            if(parm.getType().requiresConversion()) {
+                sb.append(", convert = true"); 
+            }
             if (parm.getSelectorParamName() != null && !parm.getSelectorParamName().trim().equals("")) {
                 sb.append(", name = \"" + parm.getSelectorParamName() + "\"");
             }
@@ -374,12 +429,13 @@ public class JavaOut implements Generator {
                 + "\", params = {" + sb.toString() + "\n\t})\n";
     }
 
-    private void parseMethod(CObject parent, CMethod m, CLibrary lib, boolean isAdapterImpl, Writer out) throws IOException {
+    private void parseMethod(CObject parent, CObject interfaceObj, CMethod m, CLibrary lib, boolean isAdapterImpl, Writer out) throws IOException {
         
         out.append(methodprefix);
         parseJavadoc(m.getDefinitions(), out);
+        interfaceObj = interfaceObj==null? parent : interfaceObj;
         if ((parent.isProtocol() && !m.isProperty() && !m.getDefinitions().isEmpty() && !isAdapterImpl) || 
-                 AdvisorMediator.isDelegateMethod(m.getSelectorName(), parent.name)) {
+                 AdvisorMediator.isDelegateMethod(m.getSelectorName(), interfaceObj.name)) {
             String selectorDefinition = m.getDefinitions().get(0);
             ObjCSelector selector = ObjCSelectorUtil.toObjCSelector(selectorDefinition);
             if (selector == null) {
@@ -391,30 +447,30 @@ public class JavaOut implements Generator {
         out.append("\tpublic ");
         if (m.isStatic())
             out.append("static "); 
-        else if ((!isAdapterImpl && m.isAbstract())  
+        else if ((parent.isProtocol() && !isAdapterImpl && m.isAbstract())  
                 || (isAdapterImpl && m.isMandatory()))
             out.append("abstract ");
         
         String name = m.isProperty() ? CProperty.getPropertyDef(m.name) : m.getSelectorName();
-        if (AdvisorMediator.hasSpecialReturnType(name, parent.name, m.isProperty())
+        if (AdvisorMediator.hasSpecialReturnType(name, interfaceObj.name, m.isProperty())
                 && (!m.isProperty() || (m.isProperty() && m.getArguments().isEmpty()))) //getter
-            parseSpecialReturnType(name, parent.name, m.isProperty(), out);
+            parseSpecialReturnType(name, interfaceObj.name, m.isProperty(), out);
         else
             parseType(m.getReturnType(), false, getPackageName(m.getReturnType(), lib), out);
         out.append(" ").append(m.getCanonicalName()).append("(");
         
-        if(AdvisorMediator.hasSpecialArgumentsDefined(name, parent.name, m.isProperty())
+        if(AdvisorMediator.hasSpecialArgumentsDefined(name, interfaceObj.name, m.isProperty())
                 && (!m.isProperty() || (m.isProperty() && !m.getArguments().isEmpty()))) //setter
-            parseSpecialArgumentList(name, parent.name, m.isProperty(), out);
+            parseSpecialArgumentList(name, interfaceObj.name, m.isProperty(), out); 
         else
             parseArgumentList(m.getArguments(), parent, null, lib, out);
         
-        if(isAdapterImpl && !AdvisorMediator.methodIsMandatoryForObject(m.getSelectorName(), parent.name)) {
+        if(isAdapterImpl && !AdvisorMediator.methodIsMandatoryForObject(m.getSelectorName(), interfaceObj.name)) {
             out.append(")");
-            parseInterfaceImplementationBody(parent, m, out);
+            parseInterfaceImplementationBody(interfaceObj, m, out);
         }
         else
-            out.append(")").append(m.isAbstract() ? ABSTRACTBODY : DUMMYBODY);
+            out.append(")").append((parent.isProtocol() && m.isAbstract()) ? ABSTRACTBODY : DUMMYBODY);
     }
     
     private void parseSpecialReturnType(String name, String parent, boolean isProperty, Writer out)

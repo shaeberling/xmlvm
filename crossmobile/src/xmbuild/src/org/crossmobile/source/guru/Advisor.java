@@ -97,8 +97,8 @@ public class Advisor extends DefaultHandler {
     XCode code;
     boolean isSelector = false;
     private boolean isInjectedMethod = false;
-    private List<XCode> injectedMethodCodeList;
-
+    private boolean isOverridden = false;
+    
     //
     private static String lastfile;
 
@@ -184,6 +184,7 @@ public class Advisor extends DefaultHandler {
             isMandatory = isTrue(at.getValue("mandatory"));
             isDelegate = isTrue(at.getValue("delegate"));
             ignoreMethod = isTrue(at.getValue("ignore"));
+            isOverridden = isTrue(at.getValue("override"));
             argList = new ArrayList<XArg>(); 
             isSelector = true;
         } else if(qName.equals("arg")){
@@ -219,6 +220,7 @@ public class Advisor extends DefaultHandler {
             injMethod = new XInjectedMethod();
             injectedMethodName = at.getValue("name");
             injectedMethodModifier = at.getValue("modifier");
+            isOverridden = isTrue(at.getValue("override"));
             isInjectedMethod = true;
         } else if(qName.equals("return")) {
             returnType = at.getValue("type");
@@ -260,16 +262,14 @@ public class Advisor extends DefaultHandler {
             xmethod.setDelegate(isDelegate);
             xmethod.setReturnType(returnType);
             xmethod.setIgnore(ignoreMethod);
+            xmethod.setOverridden(isOverridden);
             methodList.add(xmethod);
             argList = null;
-            isMandatory = false;
-            isDelegate = false;
-            ignoreMethod = false;
+            isMandatory = isDelegate = ignoreMethod = isSelector = isOverridden = false;
             defaultRetunValue = null;
             returnType = null;
             xmethod.setInjectedCode(selectorCodeList);
             selectorCodeList = null;
-            isSelector = false;
         } else if(qName.equals("class")){
             xobject = new XObject(className, methodList, propertyList, aliasList, referenceList, injectedMethodList);
             xobject.setOpaqueBaseType(opaqueBaseType);
@@ -289,13 +289,14 @@ public class Advisor extends DefaultHandler {
             injMethod.setName(injectedMethodName);
             injMethod.setModifier(injectedMethodModifier);
             injMethod.setArguments(argList);
+            injMethod.setOverridden(isOverridden);
             injectedMethodList.add(injMethod);
             argList = null;
             returnType = null;
             injMethod = null;
-            isInjectedMethod = false;
+            isInjectedMethod = isOverridden = false;
         } else if(qName.equals("code")){
-            code = new XCode(injectedCode.toString(), language, mode);           
+            code = new XCode(injectedCode.toString(), language, mode);  
             if(isSelector) {
                 if(selectorCodeList == null)
                     selectorCodeList = new ArrayList<XCode>();
@@ -322,6 +323,10 @@ public class Advisor extends DefaultHandler {
     public static void addDefinedObjects(CLibrary lib) {
         for (String obj : definedObjects)
             lib.getObject(obj);
+    }
+    
+    public static Set<String> getDefinedObjects(){
+        return definedObjects;
     }
 
     public static CEnum constructorOverload(String signature) {

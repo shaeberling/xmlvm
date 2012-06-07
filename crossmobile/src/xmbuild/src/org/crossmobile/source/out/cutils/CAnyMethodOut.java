@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.crossmobile.source.ctype.CMethod;
 import org.crossmobile.source.ctype.CObject;
+import org.crossmobile.source.ctype.CStruct;
+import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.xtype.AdvisorMediator;
 import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XMethod;
@@ -56,7 +58,7 @@ public abstract class CAnyMethodOut {
      *            - the selector for which the code has to be emitted
      * @return returns the constructed code
      */
-    protected String injectAccumulatorReplacerCode(String selName) {
+    protected String injectRetainPolicy(String selName) {
         List<XArg> splArgs = null;
         int i = 1;
         StringBuilder accumulativeCode = new StringBuilder();
@@ -69,7 +71,7 @@ public abstract class CAnyMethodOut {
         if (splArgs != null) {
             for (XArg sArg : splArgs) {
                 if (sArg.isRetain()) {
-                    accumulativeCode.append(getAccumulativeCode(i++, sArg.getType()));
+                    accumulativeCode.append(getAccumulativeCode(i++));
                 } else if (sArg.isReplace()) {
                     // TODO is Replace only for properties?
                 }
@@ -78,11 +80,38 @@ public abstract class CAnyMethodOut {
         return accumulativeCode.toString();
     }
 
-    protected String getAccumulativeCode(int position, String type) {
+    protected String getAccumulativeCode(int position) {
         StringBuilder accString = new StringBuilder();
-        accString.append(C.NT + "XMLVMUtil_ArrayList_add(jthiz->fields." + object.getcClassName()
-                + ".acc_array_" + object.name + ", n" + position + ");");
+        accString.append(C.NT + "XMLVMUtil_ArrayList_add(reference_array, n" + position + ");");
         return accString.toString();
+    }
+
+    /**
+     * Constructs the return variable with appropriate return type
+     * 
+     * @param returnType
+     *            - return type of the method
+     * @return - constructed string for the return variable
+     */
+    public static String getReturnVariable(String returnType) {
+        String mappedType = null;
+        StringBuilder returnVariable = new StringBuilder();
+
+        if (!returnType.equals("void")) {
+            if ((mappedType = CMethodHelper.getMappedDataType(returnType)) != null)
+                returnVariable.append(C.NT + mappedType);
+            else
+                return null;
+
+            if (!(Advisor.isNativeType(returnType) || CStruct.isStruct(returnType) || AdvisorMediator
+                    .getOpaqueBaseType(returnType) != null)
+                    || returnType.equals("Object") || CMethodHelper.requiresConversion(returnType))
+                returnVariable.append("*");
+
+            returnVariable.append(" var0 = ");
+        } else
+            returnVariable.append("");
+        return returnVariable.toString();
     }
 
 }

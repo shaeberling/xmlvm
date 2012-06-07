@@ -374,6 +374,7 @@
         
         <ignore name = "NSZone"/>
         <ignore name = "NSConnection"/>
+        <ignore name = "NSHost"/>
         <ignore name = "NSURLHandle"/>
         <ignore name = "CFData"/>
         <ignore name = "CFArray"/>
@@ -381,6 +382,7 @@
         <ignore name = "CGPDFArray"/>
         <ignore name = "CGPDFObject"/>    
         <ignore name = "CGPDFDictionary"/>
+        <ignore name = "CFDictionary"/> <!--  Multi-level hierarchy of CF opaque type not handled yet -->
         
           <!-- The extraction of variables for the below structures is not trivial  -->
         <ignore name = "NSDecimal"/> 
@@ -397,7 +399,7 @@
         <type name="String" map="NSString"/>
         <type name="List" map="NSArray"/>
         <type name="Set" map="NSSet"/>
-        <type name="Map" map=""/> <!-- Not handled yet! -->
+        <type name="Map" map="NSDictionary"/>
     </returntypes>
     
     <class name="UIView">
@@ -408,7 +410,8 @@
     
     <class name="UIViewController">
         <reference class="NSString"/>
-        
+        <reference class="UIEvent"/>
+                
         <!-- 
         If an application class subclasses UIViewController and overrides the method 
         'loadView', in the  overridden method, if a call is made to super's loadView 
@@ -418,47 +421,48 @@
         and hence the injection of the below code is required.
          -->
         <code language="c" mode="after">
-            <![CDATA[ @interface UIViewControllerWrapper (UIViewControllerWrapperCategory)
-                      - (void) superLoadView;
-                      - (void) superViewDidLoad;
-                      - (void) superViewDidDisappear:(BOOL) animated;
-                      @end
+            <![CDATA[@interface UIViewControllerWrapper (UIViewControllerWrapperCategory)
+            - (void) superLoadView;
+            - (void) superViewDidLoad;
+            - (void) superViewDidDisappear:(BOOL) animated;
+            @end
 
-                      @implementation UIViewControllerWrapper (UIViewControllerWrapperCategory)
-                      - (void) superLoadView {
-                              [super loadView];
-                         }
-                      - (void) superViewDidLoad {
-                              [super viewDidLoad];
-                         }
-                      - (void) superViewDidDisappear:(BOOL) animated{
-                              [super viewDidDisappear:animated];
-                         }
-                      @end ]]>
+            @implementation UIViewControllerWrapper (UIViewControllerWrapperCategory)
+            - (void) superLoadView {
+                [super loadView];
+            }
+            - (void) superViewDidLoad {
+                [super viewDidLoad];
+            }
+            - (void) superViewDidDisappear:(BOOL) animated{
+                [super viewDidDisappear:animated];
+            }
+            @end ]]>
         </code>
         
         <selector name="-loadView" delegate="true">
             <code language="c" mode="replace">
-                <![CDATA[ XMLVM_VAR_THIZ;
-                 [thiz superLoadView]; ]]>
+                <![CDATA[XMLVM_VAR_THIZ;
+                [thiz superLoadView]; ]]>
             </code>
         </selector>
         
         <selector name="-viewDidLoad" delegate="true">
             <code language="c" mode="replace">
-                <![CDATA[ XMLVM_VAR_THIZ;
-                 [thiz superViewDidLoad]; ]]>
+                <![CDATA[XMLVM_VAR_THIZ;
+                [thiz superViewDidLoad]; ]]>
             </code>
         </selector>
         
         <selector name="-viewDidDisappear:" delegate="true">
             <code language="c" mode="replace">
-                <![CDATA[ XMLVM_VAR_THIZ;
-                 [thiz superViewDidDisappear:n1]; ]]>
+                <![CDATA[XMLVM_VAR_THIZ;
+                [thiz superViewDidDisappear:n1]; ]]>
             </code>
         </selector>
         
         <selector name="-viewWillAppear:" delegate="true"/>
+        <selector name="-viewDidAppear:" delegate="true"/>
         <selector name="-shouldAutorotateToInterfaceOrientation:" delegate="true"/>
         <selector name="-willAnimateRotationToInterfaceOrientation:duration:" delegate="true"/>
     </class>    
@@ -470,15 +474,13 @@
         <reference class="NSString"/>
         <reference class="Class"/>
         
-<!--    <selector name="-finalize">
+        <selector name="-finalize" override="true">
             <code language="c" mode="replace">
-                <![CDATA[ XMLVM_VAR_THIZ;
-                 [thiz removeExtraMembers];
-                 [thiz release];]]>
+                <![CDATA[XMLVM_VAR_THIZ;
+                [thiz removeExtraMembers];
+                [thiz release];]]>
             </code>
         </selector>
--->
-        
     </class>
     
     <class name="UIControl">
@@ -493,14 +495,16 @@
             UIControlDelegate is an externally injected file, and hence code injection 
             becomes necessary here -->   
             <code language="c" mode="replace">
-                <![CDATA[ XMLVM_VAR_THIZ;
-            UIControlDelegateWrapper* delegateWrapper = [[UIControlDelegateWrapper alloc] initWithDelegate:n1];    
-            [thiz addTarget:delegateWrapper action:@selector(raiseEvent::) forControlEvents:n2];]]>
+                <![CDATA[XMLVM_VAR_THIZ;
+                org_xmlvm_ios_UIControlDelegate_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_UIControlDelegate(n1);
+                [jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];
+                [thiz addTarget:jwrapper->nativeDelegateWrapper_ action:@selector(raiseEvent:control:) forControlEvents:n2];
+    			objc_setAssociatedObject(thiz, &key, jwrapper->nativeDelegateWrapper_, OBJC_ASSOCIATION_RETAIN);
+    			[jwrapper->nativeDelegateWrapper_ release];
+    			XMLVMUtil_ArrayList_add(reference_array,n1);]]>
             </code>
-        </selector>
-            
+        </selector>            
     </class>
-    
     <class name="UILabel">
         <alias name ="UITableViewLabel"/>
     </class>
@@ -530,6 +534,7 @@
     
     <class name="NSString">
         <selector name="-substringToIndex:" autoReleasePool="true"/>
+        <reference class="NSError"/>
         
         <injected-method name="toString" modifier="public">
             <signature>
@@ -543,17 +548,59 @@
     
     <class name="UITabBarController">
         <property name="viewControllers" type="List&lt;UIViewController&gt;"/>
-        <property name="delegate" type="UITabBarControllerDelegate" delegate="true" replace="true"/>
+        <property name="delegate" type="UITabBarControllerDelegate" replace="true"/>
     </class> 
+
+    <class name="UITabBar">
+		<property name="delegate" type="UITabBarDelegate" replace="true"/>
+	</class>
     
+    <class name="UIPopoverController">
+		<property name="delegate" type="UIPopoverControllerDelegate" replace="true"/>
+	</class>
+	
+	<class name="UINavigationController">
+		<property name="delegate" type="UINavigationControllerDelegate" replace="true"/>
+	</class>
+	
+	<class name="UIGestureRecognizer">
+		<property name="delegate" type="UIGestureRecognizerDelegate" replace="true"/>
+	</class>
+	
+	<class name="UIScrollView">
+		<property name="delegate" type="UIScrollViewDelegate" replace="true"/>
+	</class>
+	
+	<class name="UISearchBar">
+		<property name="delegate" type="UISearchBarDelegate" replace="true"/>
+	</class>
+	
+	<class name="UISplitViewController">
+		<property name="delegate" type="UISplitViewControllerDelegate" replace="true"/>
+	</class>
+	
+	<class name="MKMapView">
+		<property name="delegate" type="MKMapViewDelegate" replace="true"/>
+	</class>
+
     <class name="UITableView">
-        <property name="dataSource" type="UITableViewDataSource" delegate="true" replace="true"/>
-        <property name="delegate" type="UITableViewDelegate" delegate="true" replace="true"/>
+        <property name="dataSource" type="UITableViewDataSource" replace="true"/>
+        <property name="delegate" type="UITableViewDelegate" replace="true"/>
         
         <selector name="-indexPathsForRowsInRect:">
             <return type="List&lt;NSIndexPath&gt;"/>
         </selector>
     </class> 
+    
+    <class name="UIPickerView">
+        <property name="dataSource" type="UIPickerViewDataSource" replace="true"/>
+        <property name="delegate" type="UIPickerViewDelegate" replace="true"/>
+    </class>
+    
+    <class name="UIPickerViewDataSource">
+    	<selector name="numberOfComponentsInPickerView:" mandatory="true"/>
+    	<selector name="pickerView:numberOfRowsInComponent:" mandatory="true"/>
+    </class>
     
     <class name="UITableViewDelegate">
     
@@ -563,7 +610,11 @@
         would eliminate the use of 'default-value' 
          -->
         <selector name="-tableView:heightForRowAtIndexPath:">
-            <return default-value="44"/>
+            <return default-value="tableView.getRowHeight()"/>
+        </selector>
+        
+        <selector name="-tableView:heightForHeaderInSection:">
+            <return default-value="tableView.getStyle()==0? 10:22"/>
         </selector>
         
         <selector name="-tableView:shouldIndentWhileEditingRowAtIndexPath:">
@@ -585,36 +636,40 @@
     </class>        
     
     <class name="UIAccelerometer">
-        <property name="delegate" type="UIAccelerometerDelegate" delegate="true" replace="true"/>
+        <property name="delegate" type="UIAccelerometerDelegate" replace="true"/>
     </class>
     
-<!--    <class name="UIImagePickerController">
-        <property name="delegate" type="UIImagePickerControllerDelegate" delegate="true" replace="true"/>
-    </class> -->
+<!--    <class name="UIImagePickerController">  --> 
+        
+        <!-- This method is injected externally since UIImagePickerController
+        has property 'delegate' which can be either set to UINavigationControllerDelegate
+        or UIImagePickerControllerDelegate. By default, only one setter is generated, 
+        in this case, for UINavigationControllerDelegate. Hence a setter for
+        UIImagePickerControllerDelegate has to be injected. Ultimate solution
+        would be to generate the setter automatically while parsing the header.
+         -->
+ <!--         <injected-method name="setDelegate" modifier="public">
+        	<signature>
+        	    <return type="void"/>
+        	    <arg type="UIImagePickerControllerDelegate" replace="true"/>
+        	</signature>
+        	<code language="c" mode="replace">
+        	    <![CDATA[XMLVM_VAR_THIZ;
+                org_xmlvm_ios_UIImagePickerControllerDelegate_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_UIImagePickerControllerDelegate(n1);
+                [jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];
+                [thiz setDelegate:jwrapper->nativeDelegateWrapper_];
+                jthiz->fields.org_xmlvm_ios_UIImagePickerController.delegate = n1;
+                ]]>                       
+        	</code>
+        </injected-method>
+    </class>  --> 
     
     <class name="CLLocationManager">
-        <property name="delegate" type="CLLocationManagerDelegate" delegate="true" replace="true"/>
+        <property name="delegate" type="CLLocationManagerDelegate" replace="true"/>
     </class>
     
     <class name="UITextField">
-        <property name="delegate" type="UITextFieldDelegate" delegate="true" replace="true"/>
-        
-        <!-- UITextField conforms to UITextInputTraits and hence we should be
-        able to access the properties of UITextInputTraaits from UITextField. 
-        However this is not taken care of in the current code and hence injecting
-        this method temporarily.
-        TODO: providing support for methods of UITextInputTraits in UITextField
-        -->
-        <injected-method name="setReturnKeyType" modifier="public">
-            <signature>
-                <return type="void"/>
-                <arg type="int"/>
-            </signature>
-            <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                        [thiz setReturnKeyType:n1];]]>
-            </code>
-        </injected-method>
+        <property name="delegate" type="UITextFieldDelegate" replace="true"/>
     </class>
     
     <class name="UITextFieldDelegate">
@@ -637,7 +692,8 @@
     </class>
     
     <class name="AVAudioPlayer">
-        <property name="delegate" type="AVAudioPlayerDelegate" delegate="true" replace="true"/>
+    	<reference class="NSError"/>
+        <property name="delegate" type="AVAudioPlayerDelegate" replace="true"/>
     </class>
     
     <class name="UIApplication">
@@ -650,18 +706,24 @@
                 <return type="void"/>
             </signature>
             <code language="c" mode="replace">
-                <![CDATA[ setAppToRun((*(JAVA_OBJECT (*)(JAVA_OBJECT)) ((java_lang_Class*) n3)->tib->vtable[XMLVM_VTABLE_IDX_java_lang_Class_newInstance__])(n3));
-                 NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-                 UIApplicationMain(0 /*argc*/, nil /*argv*/, @"UIApplication", @"UIApplicationDelegateWrapper");
-                 [pool release]; ]]>
+                <![CDATA[setAppToRun((*(JAVA_OBJECT (*)(JAVA_OBJECT)) ((java_lang_Class*) n3)->tib->vtable[XMLVM_VTABLE_IDX_java_lang_Class_newInstance__])(n3));
+                NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+                UIApplicationMain(0 /*argc*/, nil /*argv*/, @"UIApplication", @"UIApplicationDelegateWrapper");
+                [pool release]; ]]>
             </code>
         </injected-method>
+        
+        <property name="delegate" type="UIApplicationDelegate" replace="true"/>
+        
     </class>
     
     <class name="UIApplicationDelegate">
         <reference class="NSDictionary"/>
-        <!-- This is just an example for how advice looks mandatory method -->
-        <selector name="-application:didFinishLaunchingWithOptions:" mandatory="true"/>
+        <selector name="-application:didFinishLaunchingWithOptions:">
+            <arg type="UIApplication"/>
+            <arg type="Map&lt;String, Object&gt;"/>
+            <return default-value="true"/>
+        </selector>
         
         <selector name="-application:handleOpenURL:">
             <return default-value="true"/>
@@ -674,10 +736,12 @@
     
     <class name="NSData">
         <reference class="NSString"/>
+        <reference class="NSError"/>        
     </class>
     
     <class name="NSURL">
         <reference class="NSString"/>
+        <reference class="NSError"/>
     </class>
     
     <class name="UIAlertView">
@@ -686,6 +750,22 @@
     
     <class name="UIImage">
         <reference class="NSString"/>
+         
+  <!--       <selector name="UIImageWriteToSavedPhotosAlbum">
+            <signature>
+                <arg type="UIImageHandler" replace="true"/>
+                <arg type="Object"/>
+            </signature> 
+            <code language="c" mode="replace">
+                <![CDATA[XMLVM_VAR_THIZ;
+                XMLVM_VAR_IOS(NSObject, context, n2);
+                org_xmlvm_ios_UIImageHandler_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_UIImageHandler(n1);
+	            jthiz->fields.org_xmlvm_ios_UIImage.handler = n1;
+                [jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];
+                UIImageWriteToSavedPhotosAlbum(thiz, jwrapper->nativeDelegateWrapper_, @selector(image: didFinishSavingWithError: contextInfo:),context );]]>
+            </code>
+        </selector>    -->
+                
     </class>
     
     <class name="UIResponder">
@@ -723,21 +803,21 @@
     
     <class name = "CFAllocator">
         <opaque base-type = "CFType"/>
+        <reference class="CFAllocatorContext"/>
     </class>
     
     <class name = "CFURL">
         <opaque base-type = "CFType"/>
-    </class>
-    
-    <class name = "CFRunLoopTimer">
-        <opaque base-type = "CFType"/>
+        <reference class="CFError"/>
     </class>
     
     <class name = "CFRunLoopObserver">
+    	<reference class="CFRunLoopObserverContext"/>
         <opaque base-type = "CFType"/>
     </class>
     
     <class name = "CFRunLoopSource">
+    	<reference class="CFRunLoopSourceContext"/>
         <opaque base-type = "CFType"/>
     </class>
     
@@ -757,6 +837,7 @@
     </class>
     
     <class name = "CGPattern">
+    	<reference class="CGPatternCallbacks"/>
         <opaque base-type = "CFType"/>
     </class>
     
@@ -784,6 +865,12 @@
     </class>
     
     <class name = "CGDataProvider">
+    	<reference class="CGDataProviderSequentialCallbacks"/>
+    	<reference class="CGDataProviderDirectAccessCallbacks"/>
+    	<reference class="CGDataProviderDirectCallbacks"/>
+    	<reference class="CGDataProviderCallbacks"/>
+    	<selector name="CGDataProviderCreateDirectAccess" ignore="true"/>
+    	<selector name="CGDataProviderCreate" ignore="true"/>
         <opaque base-type = "CFType"/>
     </class>
     
@@ -797,6 +884,11 @@
     
     <class name = "CGFunction">
         <opaque base-type = "CFType"/>
+        <reference class="CGFunctionCallbacks"/>
+    </class>
+    
+    <class name = "NSMutableData">
+    	<reference class="NSError"/>
     </class>
     
     <class name = "CGColorSpace">
@@ -809,11 +901,61 @@
         <opaque base-type = "CFType"/>
     </class>
     
+    <class name = "CFError">
+        <opaque base-type = "CFType"/>
+    </class>
+    
     <class name = "CGPath">
+    	<reference class="CGAffineTransform"/>
         <opaque base-type = "CFType"/>
     </class>
 
     <class name="CFType" no-internal-constructor="true"/> 
+    
+    <class name = "NSStream">
+    	<reference class="NSOutputStream"/>
+    	<reference class="NSInputStream"/>
+    </class>
+    
+    <class name = "CFRunLoopTimer">
+    	<opaque base-type="CFType"/>
+    	<reference class="CFRunLoopTimerContext"/>
+    </class>
+    
+    <class name = "NSURLConnection">
+    	<reference class="NSURLResponse"/>
+    	<reference class="NSError"/>
+    </class>
+    
+     <class name = "UIWindow">
+     
+        <code language="c" mode="after">
+                <![CDATA[JAVA_OBJECT window;]]>
+        </code>
+            
+    	<selector name = "-initWithFrame:">
+    	    <code language="c" mode="after">
+                <![CDATA[window = me;]]>
+            </code>
+    	</selector>
+    </class>  
+    
+    <class name = "NSFileManager">
+    	<reference class="NSError"/>
+    </class>
+    
+    <class name = "NSBundle">
+    	<reference class="NSError"/>
+    </class>
+    
+    <class name = "MKMapPoint">
+    	<!-- Ignoring this method at the moment. Needs a fix for the
+    	Heuristics applied to generate method names. In this case, the method
+    	name generated is sPerMeterAtLatitude and is placed in MKMapPoint class.
+    	The right thing to do here, is to place it in MapKit class instead
+    	and retain the method name as MKMapPointsPerMeterAtLatitude  -->
+    	<selector name = "MKMapPointsPerMeterAtLatitude" ignore = "true"/> 
+    </class> 
 
 </advisor>
 

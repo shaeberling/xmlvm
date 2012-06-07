@@ -27,9 +27,11 @@ import org.crossmobile.source.ctype.CArgument;
 import org.crossmobile.source.ctype.CFunction;
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CStruct;
+import org.crossmobile.source.ctype.CType;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorMediator;
+import org.crossmobile.source.xtype.XCode;
 
 /**
  * This class servers as a helper class for wrapper generation of the methods.
@@ -40,13 +42,11 @@ import org.crossmobile.source.xtype.AdvisorMediator;
  */
 public class CMethodHelper {
 
-    private String         objectName = null;
-    private CLibrary       lib        = null;
-    private Set<CFunction> func       = null;
+    private CLibrary       lib  = null;
+    private Set<CFunction> func = null;
 
 
     CMethodHelper(String objectName, CLibrary lib) {
-        this.objectName = objectName;
         this.lib = lib;
         this.func = lib.getFunctions();
     }
@@ -59,29 +59,27 @@ public class CMethodHelper {
      *            - return type of the method
      * @return 'return statement' for a particular method
      */
-    public String getReturnString(String retType, StringBuilder classInitializer) {
+    public String getReturnString(String retType) {
         if (!ignore(retType) && !retType.contains("[]")) {
-            if (retType.equals("Object"))
-                return "return xmlvm_get_associated_c_object (objCObj);";
-            else if (Advisor.isNativeType(retType))
-                return "return objCObj;";
-            else if (CStruct.isStruct(retType))
-                return "return from" + retType + "(objCObj);";
-            else if (requiresConversion(retType))
-                return "return from" + getMappedDataType(retType) + "(objCObj);";
-            else if (AdvisorMediator.isCFOpaqueType(retType))
-                return "return jvar;";
-            else {
-                if (!retType.equals("Class"))
-                    classInitializer.append(C.T + "if (!__TIB_"
-                            + lib.getPackagename().replace(".", "_") + "_" + retType
-                            + ".classInitialized) __INIT_" + lib.getPackagename().replace(".", "_")
-                            + "_" + retType + "();" + C.N);
-                return "return xmlvm_get_associated_c_object (objCObj);";
-            }
+            return "return " + objectConversion(retType, 0) + ";";
         } else
             return null;
 
+    }
+
+    private static String objectConversion(String retType, int i) {
+        if (retType.equals("Object"))
+            return "xmlvm_get_associated_c_object (var" + i + ")";
+        else if (Advisor.isNativeType(retType))
+            return "var" + i;
+        else if (CStruct.isStruct(retType))
+            return "from" + retType + "(var" + i + ")";
+        else if (requiresConversion(retType))
+            return "from" + getMappedDataType(retType) + "(var" + i + ")";
+        else if (AdvisorMediator.isCFOpaqueType(retType))
+            return "refVar" + i;
+        else
+            return "xmlvm_get_associated_c_object (var" + i + ")";
     }
 
     /**
@@ -94,9 +92,7 @@ public class CMethodHelper {
      * @return true if class is ignored; false otherwise.
      */
     boolean ignore(String name) {
-        if (name.contains("Reference"))
-            return true;
-        else if ((name.contains("[]") && !Advisor.isNativeType(name.replace("[]", "")))
+        if ((name.contains("[]") && !Advisor.isNativeType(name.replace("[]", "")))
                 || name.contains("[][]")
                 || name.contains("...")
                 || Advisor.isInIgnoreList(name)
@@ -121,7 +117,8 @@ public class CMethodHelper {
      * @return returns the processed function name if it differs; Null
      *         otherwise.
      */
-    public String getModifiedFunctionName(String methodName, boolean appendObjName) {
+    public String getModifiedFunctionName(String objectName, String methodName,
+            boolean appendObjName) {
         if (appendObjName)
             return (objectName + methodName.substring(0, 1).toUpperCase() + methodName.substring(1));
         else
@@ -142,7 +139,10 @@ public class CMethodHelper {
      *            - argument position
      * @return - returns processed string for a particular argument
      */
-    public String parseArgumentType(String argType, int i) {
+    public static String parseArgumentType(String argType, int i) {
+        if (isDoublePointer(argType)) {
+            return "&var" + i;
+        }
         if (requiresConversion(argType)) {
             return "ObjCVar" + i;
         } else if (argType.equals("Object")) {
@@ -162,6 +162,10 @@ public class CMethodHelper {
         }
     }
 
+    public static boolean isDoublePointer(String type) {
+        return type.matches("Reference\\<.*\\>");
+    }
+
     private static boolean isSingleArray(String argType) {
         return (Advisor.isNativeType(argType.replace("[]", "")) && argType.contains("[]")) ? true
                 : false;
@@ -171,6 +175,7 @@ public class CMethodHelper {
         // Need a better way to segregate these types. These are the types that
         // use to* and from* methods for conversion between Java and ObjectiveC
         // objects.
+        // TODO: Move this to Advisor
         return (dataType.equals("List") || dataType.equals("Set") || dataType.equals("String")
                 || dataType.equals("NSArray") || dataType.equals("NSSet") || dataType
                 .equals("NSString")) ? true : false;
@@ -199,39 +204,11 @@ public class CMethodHelper {
         }
     }
 
-    /**
-     * Constructs the return variable with appropriate return type
-     * 
-     * @param returnType
-     *            - return type of the method
-     * @return - constructed string for the return variable
-     */
-    public static String getReturnVariable(String returnType) {
-        String mappedType = null;
-        StringBuilder returnVariable = new StringBuilder();
-
-        if (!returnType.equals("void")) {
-            if ((mappedType = getMappedDataType(returnType)) != null)
-                returnVariable.append(C.NT + mappedType);
-            else
-                return null;
-
-            if (!(Advisor.isNativeType(returnType) || CStruct.isStruct(returnType) || AdvisorMediator
-                    .getOpaqueBaseType(returnType) != null)
-                    || returnType.equals("Object") || requiresConversion(returnType))
-                returnVariable.append("*");
-
-            returnVariable.append(" objCObj = ");
-        } else
-            returnVariable.append("");
-        return returnVariable.toString();
-    }
-
     public static String getCodeToReleaseVar(int i) {
         return C.NT + "[ObjCVar" + i + " release];" + C.N;
     }
 
-    public static String getCodeToConvertVariables(int i, String argType) {
+    private static String getCodeToConvertVariables(int i, String argType) {
         String ObjCDataType = getMappedDataType(argType);
         return (ObjCDataType + " * ObjCVar" + i + " = to" + ObjCDataType + "(n" + i + ");" + C.NT);
     }
@@ -246,8 +223,8 @@ public class CMethodHelper {
      * @param isConstructor
      *            - true if the method is a constructor
      */
-    public String getRequiredMacros(List<CArgument> arguments, boolean isStatic,
-            boolean isConstructor) {
+    public static String getRequiredMacros(String objectName, List<CArgument> arguments,
+            boolean isStatic, boolean isConstructor) {
         StringBuilder macros = new StringBuilder("");
         int i = 1;
 
@@ -258,14 +235,22 @@ public class CMethodHelper {
                 macros.append(C.XMLVM_VAR_THIZ + C.NT);
         }
         for (CArgument a : arguments) {
-            if (AdvisorMediator.isCFOpaqueType(a.getType().toString())) {
-                macros.append("XMLVM_VAR_IOS_REF" + "(" + a.getType().toString() + ", ");
+            String argType = a.getType().toString();
+            if (CMethodHelper.requiresConversion(argType))
+                macros.append(getCodeToConvertVariables(i, argType));
+
+            if (isDoublePointer(argType)) {
+                macros.append(initializeReferenceVariable(a.getType(), i));
+            }
+
+            if (AdvisorMediator.isCFOpaqueType(argType)) {
+                macros.append("XMLVM_VAR_IOS_REF" + "(" + argType + ", ");
                 macros.append("var" + i + ", ");
                 macros.append("n" + i);
                 macros.append(");").append(C.NT);
-            } else if (isSingleArray(a.getType().toString())) {
-                macros.append("XMLVM_VAR_" + a.getType().toString().replace("[]", "").toUpperCase()
-                        + "_ARRAY(a" + i + ", n" + i + "); " + C.NT);
+            } else if (isSingleArray(argType)) {
+                macros.append("XMLVM_VAR_" + argType.replace("[]", "").toUpperCase() + "_ARRAY(a"
+                        + i + ", n" + i + "); " + C.NT);
             }
             i++;
         }
@@ -273,12 +258,103 @@ public class CMethodHelper {
     }
 
     /**
+     * Output parameters are identified using Reference<T> type. This needs to
+     * handled in the generated C backend.
+     * 
      * @param type
-     *            - data type of the property for a setter method
+     */
+    private static String initializeReferenceVariable(CType type, int i) {
+        StringBuilder toReturn = new StringBuilder("");
+        String macro = "";
+        StringBuilder init = new StringBuilder("");
+        String refType = getReferenceVariableType(type.toString());
+
+        init.append("JAVA_OBJECT jObject" + i + " = org_xmlvm_ios_Reference_get__(n" + i + ");"
+                + C.NT);
+
+        if (refType.equals("Object")) {
+            macro = "XMLVM_VAR_IOS(NSObject, var" + i + ", " + "jObject" + i + ");" + C.NT;
+
+        } else if (Advisor.isNativeType(refType)) {
+            init.append(refType + " var" + i + "= jObject" + i + ";" + C.NT);
+        } else if (CStruct.isStruct(refType)) {
+            init.append(refType + " var" + i + "= to" + refType + "(jObject" + i + ");" + C.NT);
+        } else if (requiresConversion(refType)) {
+            init.append(getMappedDataType(refType) + "* var" + i + "= to"
+                    + getMappedDataType(refType) + "(jObject" + i + ");" + C.NT);
+        } else if (AdvisorMediator.isCFOpaqueType(refType)) {
+            macro = "XMLVM_VAR_IOS_REF("
+                    + ((refType.endsWith("Ref")) ? refType.substring(0, refType.length() - 3)
+                            : refType) + ", var" + i + ", " + "jObject" + i + ");" + C.NT;
+        } else {
+            macro = "XMLVM_VAR_IOS(" + refType + ", var" + i + ", " + "jObject" + i + ");" + C.NT;
+        }
+
+        toReturn.append(init).append(macro);
+        return toReturn.toString();
+    }
+
+    /**
+     * @param type
+     *            - data type of the property
      * @return - true if the type is a protocol (delegate); false otherwise.
      */
     public boolean isDelegateProperty(String type) {
         return lib.getObjectIfPresent(type) != null ? lib.getObjectIfPresent(type).isProtocol()
                 : false;
+    }
+
+    /**
+     * Output parameters are identified using Reference<T> type. This needs to
+     * handled in the generated C backend.
+     * 
+     * @param type
+     * @return
+     */
+    public static String setReferenceVariable(CType type, int i) {
+        StringBuilder setter = new StringBuilder("");
+        String refType = getReferenceVariableType(type.toString());
+
+        if (AdvisorMediator.isCFOpaqueType(refType))
+            setter.append("XMLVM_VAR_INIT_REF("
+                    + ((refType.endsWith("Ref")) ? refType.substring(0, refType.length() - 3)
+                            : refType) + ",refVar" + i + ", var" + i + ");" + C.NT);
+
+        setter.append("org_xmlvm_ios_Reference_set___java_lang_Object(n" + i + ", ");
+
+        setter.append(objectConversion(refType, i));
+        setter.append(");" + C.NT);
+        if (requiresConversion(refType))
+            setter.append("[var" + i + " release];" + C.NT);
+        return setter.toString();
+    }
+
+    private static String getReferenceVariableType(String type) {
+        return type.substring(type.indexOf("<") + 1, type.indexOf(">"));
+    }
+
+    public static void setCodeForInjection(String selector, String objectName, boolean isSelector,
+            StringBuilder initialInjectedCode, StringBuilder replaceableCode,
+            StringBuilder finalInjectedCode) {
+        List<XCode> iCodeList = null;
+        if (!isSelector && AdvisorMediator.objectHasGlobalCodeInjection(objectName)) {
+            iCodeList = AdvisorMediator.getInjectedCode(objectName);
+        } else if (AdvisorMediator.selectorHasCodeInjection(selector, objectName)) {
+            iCodeList = AdvisorMediator.getInjectedCode(selector, objectName);
+        }
+
+        if (iCodeList != null) {
+            int index = 0;
+            while (index < iCodeList.size()) {
+                if (iCodeList.get(index).getMode().equals("before"))
+                    initialInjectedCode.append(iCodeList.get(index).getCode());
+                else if (iCodeList.get(index).getMode().equals("after"))
+                    finalInjectedCode.append(iCodeList.get(index).getCode());
+                else if (iCodeList.get(index).getMode().equals("replace"))
+                    replaceableCode.append(iCodeList.get(index).getCode());
+                index++;
+            }
+
+        }
     }
 }

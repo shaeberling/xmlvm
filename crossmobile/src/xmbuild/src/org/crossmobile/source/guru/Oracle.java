@@ -89,8 +89,10 @@ public class Oracle {
                     String lfname = fname.toLowerCase();
                     fname = Character.toLowerCase(fname.charAt(0)) + fname.substring(1);
                     CSelector s;
-                    if (lfname.equals("make") || fname.equals("create") || fname.equals("new"))
+                    if (lfname.equals("make") || fname.equals("create") || fname.equals("new")) {
                         s = new CConstructor(false, f.getParameters(), canonical(fname));
+                        s.setSelectorName(f.name);
+                    }
                     else {
                         List<CArgument> args = f.getParameters();
                         boolean isStatic = true;

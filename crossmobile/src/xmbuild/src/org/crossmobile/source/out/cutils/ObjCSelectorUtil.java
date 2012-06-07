@@ -91,7 +91,8 @@ public class ObjCSelectorUtil {
         String type = iter.next();
         iter.next(); // throw out this value
         boolean pointer = "*".equals(iter.next());
-        return new Variable(type, pointer);
+        boolean requiresConversion = CMethodHelper.requiresConversion(type);
+        return new Variable(type, pointer, requiresConversion);
     }
 
     /**

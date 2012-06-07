@@ -52,6 +52,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
     private String cClassName = null;
     private boolean hasMandatoryMethods = false;
     private boolean isFramework =  false;
+    private boolean hasInterfaces = false;
 
     CObject(CLibrary library, String name, boolean isProtocol) {
         super(name);
@@ -148,6 +149,7 @@ public class CObject extends CAny implements FieldHolder, Serializable {
         if (interf.equals("NSObject"))
             return;
         interfaces.add(new CType(interf));
+        hasInterfaces = true;
     }
 
     public boolean isProtocol() {
@@ -356,5 +358,9 @@ public class CObject extends CAny implements FieldHolder, Serializable {
     
     public boolean isFramework() {
         return this.isFramework;
+    }
+
+    public boolean hasInterfaces() {
+        return hasInterfaces;
     }
 }

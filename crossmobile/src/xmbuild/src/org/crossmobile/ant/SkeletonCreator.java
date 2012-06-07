@@ -18,7 +18,6 @@ package org.crossmobile.ant;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -129,7 +128,7 @@ public class SkeletonCreator extends Task {
             if(codepath == null)
                 throw new BuildException("Parameter codepath not defined.");
             try {
-                copyCode("c");
+                //copyCode("c"); // Currently no C file is externally injected
                 copyCode("java");
             } catch (Exception e) {
                 e.printStackTrace();

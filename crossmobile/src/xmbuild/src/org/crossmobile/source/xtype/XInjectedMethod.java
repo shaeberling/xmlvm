@@ -36,8 +36,9 @@ public class XInjectedMethod {
     private String      name;
     private String      value;
     private String      returnType;
-    private List<XCode> code      = new ArrayList<XCode>();
-    private List<XArg>  arguments = new ArrayList<XArg>();
+    private List<XCode> code       = new ArrayList<XCode>();
+    private List<XArg>  arguments  = new ArrayList<XArg>();
+    private boolean     overridden = false;
 
 
     public void setName(String name) {
@@ -78,6 +79,14 @@ public class XInjectedMethod {
 
     public List<XCode> getInjectedCode() {
         return this.code;
+    }
+
+    public void setOverridden(boolean isOverridden) {
+        this.overridden = isOverridden;
+    }
+
+    public boolean isOverridden() {
+        return overridden;
     }
 
 }

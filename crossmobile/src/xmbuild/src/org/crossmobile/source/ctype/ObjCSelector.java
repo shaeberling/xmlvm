@@ -69,6 +69,7 @@ public class ObjCSelector {
     public static class Variable {
         private String type;
         private boolean pointer;
+        private boolean requiresConversion;
 
         /**
          * @param type
@@ -78,9 +79,10 @@ public class ObjCSelector {
          *            have a "*"? Note that "id" types are an exception, which
          *            will be false.
          */
-        public Variable(String type, boolean pointer) {
+        public Variable(String type, boolean pointer, boolean requiresConversion) {
             this.type = type;
             this.pointer = pointer;
+            this.requiresConversion = requiresConversion;
         }
 
         @Override
@@ -112,6 +114,10 @@ public class ObjCSelector {
         }
         public void setPointer(boolean pointer) {
             this.pointer = pointer;
+        }
+        
+        public boolean requiresConversion(){
+            return requiresConversion;
         }
     }
 

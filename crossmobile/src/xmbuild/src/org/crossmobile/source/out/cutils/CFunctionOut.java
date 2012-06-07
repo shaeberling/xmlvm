@@ -60,37 +60,36 @@ public class CFunctionOut extends CAnyMethodOut {
         String argList = null;
         String tempName = null;
         String returnVariableStr = null;
-        StringBuilder beginVarConversion = new StringBuilder("");
         StringBuilder releaseVar = new StringBuilder("");
+        String setReferenceObj = "";
         int i = 1;
 
         if (method.isStatic() || parentIsStruct || AdvisorMediator.isCFOpaqueType(object.name)) {
 
             List<CArgument> arguments = method.getArguments();
-            methodCall.append(methodHelper.getRequiredMacros(arguments, method.isStatic(), false));
+            methodCall.append(CMethodHelper.getRequiredMacros(object.name, arguments, method
+                    .isStatic(), false));
 
             for (CArgument arg : arguments) {
-                if (CMethodHelper.requiresConversion(arg.getType().toString())) {
-                    beginVarConversion.append(CMethodHelper.getCodeToConvertVariables(i, arg
-                            .getType().toString()));
+                if (CMethodHelper.requiresConversion(arg.getType().toString()))
                     releaseVar.append(CMethodHelper.getCodeToReleaseVar(i));
-                }
+                if (CMethodHelper.isDoublePointer(arg.getType().toString()))
+                    setReferenceObj = CMethodHelper.setReferenceVariable(arg.getType(), i);
                 i++;
             }
 
-            methodCall.append(beginVarConversion + C.NT);
-
-            if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType()
-                    .toString())) != null)
+            if ((returnVariableStr = getReturnVariable(method.getReturnType().toString())) != null)
                 methodCall.append(returnVariableStr);
             else
                 return null;
 
             if (parentIsStruct || AdvisorMediator.isCFOpaqueType(object.name)) {
-                methodCall.append(methodHelper.getModifiedFunctionName(method.name, true));
+                methodCall.append(methodHelper.getModifiedFunctionName(object.name, method.name,
+                        true));
                 argList = getArgumentsToPass(arguments, method.isStatic(), parentIsStruct,
                         methodHelper);
-            } else if ((tempName = methodHelper.getModifiedFunctionName(method.name, false)) != null) {
+            } else if ((tempName = methodHelper.getModifiedFunctionName(object.name, method.name,
+                    false)) != null) {
                 methodCall.append(tempName);
                 argList = getArgumentsToPass(arguments, method.isStatic(), false, methodHelper);
             } else {
@@ -105,10 +104,11 @@ public class CFunctionOut extends CAnyMethodOut {
             return null;
 
         methodCall.append(argList + ";" + C.NT);
+        methodCall.append(setReferenceObj);
         methodCall.append(releaseVar);
         if (AdvisorMediator.isCFOpaqueType(method.getReturnType().toString()))
             methodCall.append(C.T + "XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
-                    + ", objCObj);" + C.N);
+                    + ", refVar0, var0);" + C.N);
         return methodCall.toString();
     }
 
@@ -156,7 +156,7 @@ public class CFunctionOut extends CAnyMethodOut {
             isFirst = false;
 
             if (!methodHelper.ignore(argType)
-                    && (parsedArg = methodHelper.parseArgumentType(argType, i)) != null) {
+                    && (parsedArg = CMethodHelper.parseArgumentType(argType, i)) != null) {
                 argList.append(parsedArg);
                 i++;
             } else {

@@ -40,7 +40,8 @@ public class XMethod {
 
     private String      defaultRetunValue      = null;
     private boolean     isDelegate             = false;
-    private boolean     isIgnore             = false;
+    private boolean     isIgnore               = false;
+    private boolean     overridden             = false;
 
 
     public XMethod(String selectorName, List<XArg> argList, String requireAutoReleasePool,
@@ -119,5 +120,13 @@ public class XMethod {
 
     public boolean isIgnore() {
         return isIgnore;
+    }
+
+    public void setOverridden(boolean isOverridden) {
+        this.overridden = isOverridden;
+    }
+
+    public boolean isOverridden() {
+        return overridden;
     }
 }

@@ -28,8 +28,6 @@ import org.crossmobile.source.ctype.CObject;
 import org.crossmobile.source.ctype.CProperty;
 import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorMediator;
-import org.crossmobile.source.xtype.XObject;
-import org.crossmobile.source.xtype.XProperty;
 
 /**
  * This class is used to get the code that is related to the getters and setters
@@ -40,8 +38,12 @@ import org.crossmobile.source.xtype.XProperty;
  */
 public class ObjCPropertyOut extends CAnyMethodOut {
 
-    public ObjCPropertyOut(CObject object) {
+    private CObject conformsTo = null;
+
+
+    public ObjCPropertyOut(CObject object, CObject interfaceObject) {
         super(object);
+        conformsTo = interfaceObject;
     }
 
     /**
@@ -78,14 +80,13 @@ public class ObjCPropertyOut extends CAnyMethodOut {
         String returnVariableStr = "";
         methodCall.append(C.XMLVM_VAR_THIZ);
 
-        if (((returnVariableStr = CMethodHelper
-                .getReturnVariable(method.getReturnType().toString())) != null)
+        if (((returnVariableStr = getReturnVariable(method.getReturnType().toString())) != null)
                 && (method.derivesFromObjC())) {
             methodCall.append(returnVariableStr);
-            methodCall.append("[thiz " + CProperty.getPropertyDef(method.name) + "];");
+            methodCall.append("[thiz " + CProperty.getPropertyDef(method.name) + "];" + C.NT);
             if (AdvisorMediator.isCFOpaqueType(method.getReturnType().toString()))
                 methodCall.append("XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
-                        + ", objCObj);");
+                        + ", refVar0, var0);");
         } else
             return null;
 
@@ -103,20 +104,25 @@ public class ObjCPropertyOut extends CAnyMethodOut {
      * @return returns the wrapper code for the setter
      */
     private String getSetterCode(CMethod method, CMethodHelper methodHelper) {
+        CObject obj = conformsTo == null ? object : conformsTo;
         String accString = "";
         StringBuilder objCCall = new StringBuilder();
-        String beginVarConversion = "";
         String releaseVar = "";
         String initDelegateWrapper = "";
+        String releaseDelegate = "";
+        String setAssociation = "";
         StringBuilder methodCode = new StringBuilder();
+        String propertyName = CProperty.getPropertyDef(method.name);
 
-        if (AdvisorMediator.classHasRetainPolicy(object.name)
-                || AdvisorMediator.classHasReplacePolicy(object.name)) {
-            accString = injectAccumulatorReplacerCode(method.name);
+        if (AdvisorMediator.propertyNeedsToBeReplaced(propertyName, obj.name)
+                || AdvisorMediator.propertyNeedsToBeRetained(propertyName, obj.name)) {
+            releaseDelegate = getReleaseDelegateCode(propertyName);
+            setAssociation = getSetAssociationCode();
+            accString = getAccumulativeCode(1);
         }
 
-        methodCode.append(methodHelper.getRequiredMacros(method.getArguments(), method.isStatic(),
-                false));
+        methodCode.append(CMethodHelper.getRequiredMacros(object.name, method.getArguments(),
+                method.isStatic(), false));
 
         if (method.derivesFromObjC())
             objCCall.append("[thiz " + method.name + ":");
@@ -128,24 +134,36 @@ public class ObjCPropertyOut extends CAnyMethodOut {
         if ((arg.isEmpty()) || (arg.size() > 1))
             throw new RuntimeException("Argument list is empty or more thn 1");
 
-        if (CMethodHelper.requiresConversion(argType)) {
-            beginVarConversion = CMethodHelper.getCodeToConvertVariables(1, argType);
+        if (CMethodHelper.requiresConversion(argType))
             releaseVar = CMethodHelper.getCodeToReleaseVar(1);
-        }
 
         if (methodHelper.isDelegateProperty(arg.get(0).getType().toString())) {
-            initDelegateWrapper = initDelegateWrapper(arg.get(0));
+            initDelegateWrapper = initDelegateWrapper(arg.get(0), propertyName);
             objCCall.append("jwrapper->nativeDelegateWrapper_");
         } else if (!methodHelper.ignore(arg.get(0).getType().toString()))
-            objCCall.append(methodHelper.parseArgumentType(arg.get(0).getType().toString(), 1));
+            objCCall.append(CMethodHelper.parseArgumentType(arg.get(0).getType().toString(), 1));
         else
             return null;
 
         objCCall.append("];");
-        methodCode.append(beginVarConversion).append(initDelegateWrapper).append(objCCall).append(
-                accString).append(releaseVar + C.N);
+        methodCode.append(releaseDelegate).append(initDelegateWrapper).append(objCCall).append(
+                accString).append(setAssociation).append(releaseVar + C.N);
 
         return methodCode.toString();
+    }
+
+    private String getSetAssociationCode() {
+        StringBuilder setAssociation = new StringBuilder();
+        setAssociation
+                .append("objc_setAssociatedObject(thiz, &key, jwrapper->nativeDelegateWrapper_, OBJC_ASSOCIATION_RETAIN);"
+                        + C.NT);
+        setAssociation.append("[jwrapper->nativeDelegateWrapper_ release];" + C.NT);
+        return setAssociation.toString();
+    }
+
+    private String getReleaseDelegateCode(String property) {
+        return "if(thiz." + property + "!= nil) [thiz." + property + " release];" + C.NT;
+
     }
 
     /**
@@ -156,34 +174,16 @@ public class ObjCPropertyOut extends CAnyMethodOut {
      *            - Argument to setter - which is a delegate
      * @return - string for initializing the delegate wrapper object
      */
-    private String initDelegateWrapper(CArgument delegate) {
+    private String initDelegateWrapper(CArgument delegate, String property) {
         StringBuilder initializer = new StringBuilder("");
         String delegateClassName = COut.packageName + delegate.getType().toString();
+
         initializer.append(delegateClassName
                 + "_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_" + delegateClassName
                 + "(n1);" + C.NT);
         initializer.append("[jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];" + C.NT);
+
         return initializer.toString();
-    }
-
-    /**
-     * Method to get code for keeping C-reference of a property to tell GC about
-     * the association
-     */
-    @Override
-    protected String injectAccumulatorReplacerCode(String methodName) {
-        XProperty prop = null;
-        String accString = "";
-        XObject obj = AdvisorMediator.getSpecialClass(object.name);
-        if ((prop = obj.getPropertyInstance(CProperty.getPropertyDef(methodName))) != null) {
-            if (prop.isRetain())
-                accString = getAccumulativeCode(1, prop.getType());
-            else if (prop.isReplace())
-                accString = C.NT + "jthiz->fields." + object.getcClassName() + "." + prop.getName()
-                        + " = n1;";
-        }
-
-        return accString.toString();
     }
 
 }

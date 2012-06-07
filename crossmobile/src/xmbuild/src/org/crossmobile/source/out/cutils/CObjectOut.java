@@ -26,9 +26,9 @@ import java.util.List;
 
 import org.crossmobile.source.ctype.CLibrary;
 import org.crossmobile.source.ctype.CObject;
+import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorMediator;
-import org.crossmobile.source.xtype.XCode;
 import org.crossmobile.source.xtype.XObject;
 
 /**
@@ -41,13 +41,9 @@ import org.crossmobile.source.xtype.XObject;
  */
 public class CObjectOut {
 
-    private Writer   out                 = null;
-    private CObject  object              = null;
-    private CLibrary lib                 = null;
-
-    String           initialInjectedCode = null;
-    String           finalInjectedCode   = null;
-    String           replaceableCode     = null;
+    private Writer   out    = null;
+    private CObject  object = null;
+    private CLibrary lib    = null;
 
 
     public CObjectOut(Writer out, CLibrary lib, CObject object) {
@@ -63,18 +59,28 @@ public class CObjectOut {
      */
     public void emitImpl() throws IOException {
         if (!object.isFramework()) {
-            setGlobalCodeForEmission();
+            StringBuilder initialInjectedCode = new StringBuilder();
+            StringBuilder finalInjectedCode = new StringBuilder();
+            StringBuilder replaceableCode = new StringBuilder();
+
+            CMethodHelper.setCodeForInjection(null, object.name, false, initialInjectedCode,
+                    replaceableCode, finalInjectedCode);
             if (AdvisorMediator.needsInternalConstructor(object.name)) {
                 out.append(C.BEGIN_IMPL + C.N);
-                if (replaceableCode != null) {
+
+                if (AdvisorMediator.getOpaqueBaseType(object.name) == null
+                        && !Advisor.getDefinedObjects().contains(object.name))
+                    emitInitializer();
+
+                if (!replaceableCode.toString().isEmpty()) {
                     out.append(replaceableCode);
                 } else {
-                    if (initialInjectedCode != null)
+                    if (!initialInjectedCode.toString().isEmpty())
                         out.append(initialInjectedCode);
                     emitInternalConstructor();
                     if (AdvisorMediator.getOpaqueBaseType(object.name) == null)
                         emitWrapperCreator();
-                    if (finalInjectedCode != null)
+                    if (!finalInjectedCode.toString().isEmpty())
                         out.append(finalInjectedCode);
                 }
                 out.append(C.END_IMPL + C.N);
@@ -84,32 +90,32 @@ public class CObjectOut {
             }
 
             CConstructorOut cConsOut = new CConstructorOut(out, lib, object);
-            cConsOut.emitConstructors(false);
+            cConsOut.emitConstructors();
         }
         CMethodOut cMethodOut = new CMethodOut(out, lib, object);
-        cMethodOut.emitMethods(false);
+        cMethodOut.emitMethods();
     }
 
     /**
+     * Initializer is added to every class via the category inorder to check if
+     * a class has been initialized previously. If it was not initialized, then
+     * the _INIT_ method for the particular class is called. This is essetial
+     * when an object has to be created on the fly. (If wrapper creator was not
+     * previously registered, in such cases, error is thrown)
+     * 
+     * @throws IOException
      * 
      */
-    private void setGlobalCodeForEmission() {
-
-        if (AdvisorMediator.objectHasGlobalCodeInjection(object.name)) {
-            List<XCode> iCode = AdvisorMediator.getInjectedCodeForObject(object.name);
-            int index = 0;
-            while (index < iCode.size()) {
-                if (iCode.get(index).getMode().equals("before"))
-                    initialInjectedCode = iCode.get(index).getCode();
-                else if (iCode.get(index).getMode().equals("after"))
-                    finalInjectedCode = iCode.get(index).getCode();
-                else if (iCode.get(index).getMode().equals("replace"))
-                    replaceableCode = iCode.get(index).getCode();
-                index++;
-            }
-
-        }
-
+    private void emitInitializer() throws IOException {
+        out.append("@interface " + object.name + " (" + object.name + "WrapperCategory)" + C.N);
+        out.append("+ (void) initialize_class;" + C.N);
+        out.append("@end" + C.N);
+        out.append(C.N + "@implementation " + object.name + " (" + object.name + "WrapperCategory)"
+                + C.N);
+        out.append("+ (void) initialize_class {" + C.NT);
+        out.append("if(!__TIB_" + object.getcClassName() + ".classInitialized)" + C.NTT);
+        out.append("__INIT_" + object.getcClassName() + "();" + C.N);
+        out.append("}" + C.N + "@end" + C.N + C.N);
     }
 
     /**
@@ -130,13 +136,7 @@ public class CObjectOut {
             out.append("CFType");
         else
             out.append("NSObject");
-        out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.N);
-        if (AdvisorMediator.classHasRetainPolicy(object.name)) {
-            out.append(object.getcClassName() + "* thiz = (" + object.getcClassName() + "*)me;"
-                    + C.N);
-            out.append("thiz->fields." + object.getcClassName() + ".acc_array_" + object.name
-                    + " = XMLVMUtil_NEW_ArrayList();" + C.N);
-        }
+        out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.NT);
 
         out.append("}" + C.N);
     }
@@ -185,7 +185,7 @@ public class CObjectOut {
     }
 
     /**
-     * The C version of the obj C object has to be cleaned
+     * The C version of the objC object has to be cleaned
      * 
      * @throws IOException
      */

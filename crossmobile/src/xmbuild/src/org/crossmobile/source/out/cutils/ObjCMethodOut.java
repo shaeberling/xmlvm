@@ -65,18 +65,19 @@ public class ObjCMethodOut extends CAnyMethodOut {
         int i = 1;
         String returnVariableStr = null;
         String accString = "";
-        StringBuilder beginListConversion = new StringBuilder("");
         StringBuilder releaseList = new StringBuilder("");
         StringBuilder methodCode = new StringBuilder();
+        String setReferenceObj = "";
 
         if (AdvisorMediator.classHasRetainPolicy(object.name)
                 || AdvisorMediator.classHasReplacePolicy(object.name)) {
-            accString = injectAccumulatorReplacerCode(selName);
+            accString = injectRetainPolicy(selName);
         }
 
-        methodCode.append(methodHelper.getRequiredMacros(arguments, method.isStatic(), false));
+        methodCode.append(CMethodHelper.getRequiredMacros(object.name, arguments,
+                method.isStatic(), false));
 
-        if ((returnVariableStr = CMethodHelper.getReturnVariable(method.getReturnType().toString())) != null)
+        if ((returnVariableStr = getReturnVariable(method.getReturnType().toString())) != null)
             objCCall.append(returnVariableStr);
         else
             return null;
@@ -96,15 +97,16 @@ public class ObjCMethodOut extends CAnyMethodOut {
                 CArgument argument = (CArgument) iterator.next();
                 argType = argument.getType().toString();
 
-                if (CMethodHelper.requiresConversion(argType)) {
-                    beginListConversion.append(CMethodHelper.getCodeToConvertVariables(i, argType));
+                if (CMethodHelper.requiresConversion(argType))
                     releaseList.append(CMethodHelper.getCodeToReleaseVar(i));
-                }
+
+                if (CMethodHelper.isDoublePointer(argType))
+                    setReferenceObj = CMethodHelper.setReferenceVariable(argument.getType(), i);
 
                 objCCall.append(" " + namePart + ":");
 
                 if (!methodHelper.ignore(argType)) {
-                    objCCall.append(methodHelper.parseArgumentType(argType, i));
+                    objCCall.append(CMethodHelper.parseArgumentType(argType, i));
                     i++;
                 } else
                     return null;
@@ -112,10 +114,11 @@ public class ObjCMethodOut extends CAnyMethodOut {
         }
 
         objCCall.append("];");
-        methodCode.append(beginListConversion).append(objCCall);
+        methodCode.append(objCCall);
+        objCCall.append(setReferenceObj);
         if (AdvisorMediator.isCFOpaqueType(method.getReturnType().toString()))
             methodCode.append(C.T + "XMLVM_VAR_INIT_REF(" + method.getReturnType().toString()
-                    + ", objCObj);" + C.N);
+                    + ", refVar0, var0);" + C.N);
         methodCode.append(accString).append(releaseList + C.N);
         return methodCode.toString();
     }

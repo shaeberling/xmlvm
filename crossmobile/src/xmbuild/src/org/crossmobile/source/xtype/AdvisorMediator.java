@@ -21,7 +21,6 @@
 package org.crossmobile.source.xtype;
 
 import java.util.List;
-
 import org.crossmobile.source.guru.Advisor;
 
 /**
@@ -69,6 +68,41 @@ public class AdvisorMediator {
         return (Advisor.getSpecialClasses().containsKey(objectName) && Advisor.getSpecialClasses()
                 .get(objectName).hasRetainPolicy());
 
+    }
+
+    /**
+     * Checks if a property needs retain policy, where the reference to the
+     * property is stored in an accumulative fashion
+     * 
+     * @param property
+     *            - name of the property
+     * @param objectName
+     *            - name of the class the property is part of
+     * @return true if accumulative retention is required; false otherwise.
+     */
+    public static boolean propertyNeedsToBeRetained(String property, String objectName) {
+        XObject obj = null;
+        XProperty prop = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? (((prop = obj
+                .getPropertyInstance(property)) != null) ? prop.isRetain() : false) : false;
+    }
+
+    /**
+     * Checks if a property needs retain policy, where the reference to the
+     * property is stored by replacing the older reference (Eg: in case of
+     * setDelegate)
+     * 
+     * @param property
+     *            - name of the property
+     * @param objectName
+     *            - name of the class the property is part of
+     * @return true if replace retain policy is required; false otherwise.
+     */
+    public static boolean propertyNeedsToBeReplaced(String property, String objectName) {
+        XObject obj = null;
+        XProperty prop = null;
+        return ((obj = getSpecialClass(objectName)) != null) ? (((prop = obj
+                .getPropertyInstance(property)) != null) ? prop.isReplace() : false) : false;
     }
 
     /**
@@ -135,7 +169,7 @@ public class AdvisorMediator {
      * @return List of instances of XInjectedMethod class which contain the
      *         information for code injection
      */
-    public static List<XCode> getInjectedCodeForSelector(String selName, String objectName) {
+    public static List<XCode> getInjectedCode(String selName, String objectName) {
         return getSpecialClass(objectName).getInjectedCodeForSelector(selName);
     }
 
@@ -283,6 +317,8 @@ public class AdvisorMediator {
      */
     public static boolean isCFOpaqueType(String objectName) {
         String opaqueType;
+        if (objectName.endsWith("Ref"))
+            objectName = objectName.substring(0, objectName.length() - 3);
         return ((opaqueType = getOpaqueBaseType(objectName)) != null && opaqueType.equals("CFType")) ? true
                 : false;
     }
@@ -426,8 +462,20 @@ public class AdvisorMediator {
      *            - Name of the class
      * @return return the list of code snippet for injection
      */
-    public static List<XCode> getInjectedCodeForObject(String objectName) {
+    public static List<XCode> getInjectedCode(String objectName) {
         return getSpecialClass(objectName).getGlobalCodeToInject();
+    }
+
+    /**
+     * @param selectorName
+     * @param name
+     * @return
+     */
+    public static boolean methodIsOverridden(String selName, String objectName) {
+        XObject obj = null;
+        XMethod method = null;
+        return (obj = getSpecialClass(objectName)) != null ? ((method = obj
+                .getMethodInstance(selName)) != null ? method.isOverridden() : false) : false;
     }
 
 }
