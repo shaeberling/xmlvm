@@ -405,7 +405,8 @@
     <class name="UIView">
         <alias name ="UILayoutContainerView"/>        
         <selector name="-initWithFrame:" autoReleasePool="true"/>       
-        <selector name="-drawRect:" delegate="true"/>                 
+        <selector name="-drawRect:" delegate="true"/>
+        <property name="subviews" type="List&lt;UIView&gt;"/>
     </class>
     
     <class name="UIViewController">
@@ -744,13 +745,72 @@
         <reference class="NSError"/>
     </class>
     
+    <class name="NSURLRequest">
+        <selector name="+requestWithURL:">
+          <signature>
+            <arg type="NSURL"/>
+            <return type="NSURLRequest"/>
+          </signature>
+        </selector>
+        <selector name="+requestWithURL:cachePolicy:timeoutInterval:">
+          <signature>
+            <arg type="NSURL"/>
+            <arg type="int"/>
+            <arg type="double"/>
+            <return type="NSURLRequest"/>
+          </signature>
+        </selector>
+    </class>
+    
     <class name="UIAlertView">
         <reference class="UILabel"/>
     </class>
     
     <class name="UIImage">
         <reference class="NSString"/>
-         
+
+        <code language="c" mode="before">
+            <![CDATA[
+@interface CroppedImageArgs : NSObject {
+@public    CGRect cropRect;
+@public    UIImage* croppedImage;
+}
+@end
+
+@implementation CroppedImageArgs
+@end
+
+@interface UIImage(cat_UIImage)
+@end
+
+@implementation UIImage(cat_UIImage)
+/*
+ * We perform the cropping on the main thread in case the cropping is
+ * done in a thread. Quartz is not thread-safe.
+ */
+- (void) cropImage: (id) args
+{
+    CGRect cropRect = ((CroppedImageArgs*) args)->cropRect;
+    CGSize size = cropRect.size;
+    UIGraphicsBeginImageContext(size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGImageRef subImage = CGImageCreateWithImageInRect([self CGImage], cropRect);
+    CGRect myRect = CGRectMake(0.0f, 0.0f, size.width, size.height);
+    CGContextScaleCTM(context, 1.0f, -1.0f);
+    CGContextTranslateCTM(context, 0.0f, -size.height);
+    CGContextFlush(context);
+    CGContextDrawImage(context, myRect, subImage);
+    CGContextFlush(context);
+    UIImage* croppedImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    [croppedImage retain];
+    CGImageRelease(subImage);
+    ((CroppedImageArgs *) args)->croppedImage = croppedImage;
+}
+@end
+]]>
+        </code>
+
   <!--       <selector name="UIImageWriteToSavedPhotosAlbum">
             <signature>
                 <arg type="UIImageHandler" replace="true"/>
@@ -765,14 +825,54 @@
                 UIImageWriteToSavedPhotosAlbum(thiz, jwrapper->nativeDelegateWrapper_, @selector(image: didFinishSavingWithError: contextInfo:),context );]]>
             </code>
         </selector>    -->
+        <injected-method name="cropImage" modifier="public">
+            <signature>
+                <arg type="int"/>
+                <arg type="int"/>
+                <arg type="int"/>
+                <arg type="int"/>
+                <return type="UIImage"/>
+            </signature>
+            <code language="c" mode="replace">
+                <![CDATA[
+    XMLVM_VAR_THIZ;
+    XMLVM_VAR_INT(x, n1);
+    XMLVM_VAR_INT(y, n2);
+    XMLVM_VAR_INT(width, n3);
+    XMLVM_VAR_INT(height, n4);
+    
+    CroppedImageArgs* args = [[CroppedImageArgs alloc] init];
+    args->cropRect = CGRectMake(x, y, width, height);
+    [thiz performSelectorOnMainThread:@selector(cropImage:) withObject:args waitUntilDone:TRUE];
+    UIImage* croppedImage = args->croppedImage;
+    [args release];
+    JAVA_OBJECT obj = xmlvm_get_associated_c_object(croppedImage);
+    [croppedImage release];
+    return obj;
+]]>
+            </code>
+        </injected-method>
                 
     </class>
     
     <class name="UIResponder">
         <reference class="UITouch"/>
-        <selector name="-touchesBegan:withEvent:" delegate="true"/>
-        <selector name="-touchesMoved:withEvent:" delegate="true"/>
-        <selector name="-touchesEnded:withEvent:" delegate="true"/>        
+        <selector name="-touchesBegan:withEvent:" delegate="true">
+            <arg type="Set&lt;UITouch&gt;"/>
+            <arg type="UIEvent"/>
+        </selector>
+        <selector name="-touchesMoved:withEvent:" delegate="true">
+            <arg type="Set&lt;UITouch&gt;"/>
+            <arg type="UIEvent"/>
+        </selector>
+        <selector name="-touchesEnded:withEvent:" delegate="true">        
+            <arg type="Set&lt;UITouch&gt;"/>
+            <arg type="UIEvent"/>
+        </selector>
+        <selector name="-touchesCancelled:withEvent:" delegate="true">        
+            <arg type="Set&lt;UITouch&gt;"/>
+            <arg type="UIEvent"/>
+        </selector>
     </class>
     
     <class name="CGRect">
