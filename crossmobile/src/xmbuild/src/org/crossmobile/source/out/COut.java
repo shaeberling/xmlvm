@@ -64,7 +64,6 @@ public class COut implements Generator {
         this.lib = library;
         packageName = lib.getPackagename().replace(".", "_") + "_";
         File out = new File(outdir);
-        FileUtils.delete(out);
 
         for (CObject o : lib.getObjects()) {
             final CObject fo = o;

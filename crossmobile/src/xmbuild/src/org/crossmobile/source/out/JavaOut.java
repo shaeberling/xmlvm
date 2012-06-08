@@ -62,7 +62,6 @@ public class JavaOut implements Generator {
     public void generate(final CLibrary library) {
         File out = new File(outdir);
         File protocolOut = new File(outdir+"/adapter");
-        FileUtils.delete(out);
 
         for (CObject o : library.getObjects()) {
             final CObject fo = o;
