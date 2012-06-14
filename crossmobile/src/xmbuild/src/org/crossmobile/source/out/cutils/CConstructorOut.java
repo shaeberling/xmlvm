@@ -130,7 +130,7 @@ public class CConstructorOut {
             StringBuilder replaceableCode = new StringBuilder();
             StringBuilder finalInjectedCode = new StringBuilder();
 
-            CMethodHelper.setCodeForInjection(con.getSelectorName(), object.name, true,
+            CMethodHelper.setCodeForInjection(con.getSelectorName(), object.name, true, false,
                     initialInjectedCode, replaceableCode, finalInjectedCode);
 
             if (!replaceableCode.toString().isEmpty()) {

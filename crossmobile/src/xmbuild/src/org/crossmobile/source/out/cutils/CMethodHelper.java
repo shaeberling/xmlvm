@@ -334,8 +334,11 @@ public class CMethodHelper {
     }
 
     public static void setCodeForInjection(String selector, String objectName, boolean isSelector,
-            StringBuilder initialInjectedCode, StringBuilder replaceableCode,
-            StringBuilder finalInjectedCode) {
+            boolean isInternalCon, StringBuilder initialInjectedCode,
+            StringBuilder replaceableCode, StringBuilder finalInjectedCode) {
+        String modePrefix = "";
+        if (isInternalCon)
+            modePrefix = "internal-constructor";
         List<XCode> iCodeList = null;
         if (!isSelector && AdvisorMediator.objectHasGlobalCodeInjection(objectName)) {
             iCodeList = AdvisorMediator.getInjectedCode(objectName);
@@ -346,11 +349,11 @@ public class CMethodHelper {
         if (iCodeList != null) {
             int index = 0;
             while (index < iCodeList.size()) {
-                if (iCodeList.get(index).getMode().equals("before"))
+                if (iCodeList.get(index).getMode().equals(modePrefix + "before"))
                     initialInjectedCode.append(iCodeList.get(index).getCode());
-                else if (iCodeList.get(index).getMode().equals("after"))
+                else if (iCodeList.get(index).getMode().equals(modePrefix + "after"))
                     finalInjectedCode.append(iCodeList.get(index).getCode());
-                else if (iCodeList.get(index).getMode().equals("replace"))
+                else if (iCodeList.get(index).getMode().equals(modePrefix + "replace"))
                     replaceableCode.append(iCodeList.get(index).getCode());
                 index++;
             }

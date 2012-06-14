@@ -63,20 +63,21 @@ public class CObjectOut {
             StringBuilder finalInjectedCode = new StringBuilder();
             StringBuilder replaceableCode = new StringBuilder();
 
-            CMethodHelper.setCodeForInjection(null, object.name, false, initialInjectedCode,
+            CMethodHelper.setCodeForInjection(null, object.name, false, false, initialInjectedCode,
                     replaceableCode, finalInjectedCode);
             if (AdvisorMediator.needsInternalConstructor(object.name)) {
                 out.append(C.BEGIN_IMPL + C.N);
-
-                if (AdvisorMediator.getOpaqueBaseType(object.name) == null
-                        && !Advisor.getDefinedObjects().contains(object.name))
-                    emitInitializer();
 
                 if (!replaceableCode.toString().isEmpty()) {
                     out.append(replaceableCode);
                 } else {
                     if (!initialInjectedCode.toString().isEmpty())
-                        out.append(initialInjectedCode);
+                        out.append(initialInjectedCode + C.N);
+
+                    if (AdvisorMediator.getOpaqueBaseType(object.name) == null
+                            && !Advisor.getDefinedObjects().contains(object.name))
+                        emitInitializer();
+
                     emitInternalConstructor();
                     if (AdvisorMediator.getOpaqueBaseType(object.name) == null)
                         emitWrapperCreator();
@@ -124,19 +125,37 @@ public class CObjectOut {
      * 
      * @throws IOException
      */
+
     private void emitInternalConstructor() throws IOException {
+
+        StringBuilder initialInjectedCode = new StringBuilder();
+        StringBuilder finalInjectedCode = new StringBuilder();
+        StringBuilder replaceableCode = new StringBuilder();
+
         out.append("void " + object.getcClassName() + "_INTERNAL_CONSTRUCTOR(JAVA_OBJECT me,");
 
         out.append(AdvisorMediator.isCFOpaqueType(object.name) ? "CFTypeRef" : "NSObject*");
         out.append(" wrappedObj){" + C.NT);
-        out.append(COut.packageName);
-        if (object.getSuperclass() != null)
-            out.append(object.getSuperclass().getProcessedName());
-        else if (AdvisorMediator.isCFOpaqueType(object.name))
-            out.append("CFType");
-        else
-            out.append("NSObject");
-        out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.NT);
+
+        CMethodHelper.setCodeForInjection(null, object.name, false, true, initialInjectedCode,
+                replaceableCode, finalInjectedCode);
+
+        if (!replaceableCode.toString().isEmpty()) {
+            out.append(replaceableCode);
+        } else {
+            if (!initialInjectedCode.toString().isEmpty())
+                out.append(initialInjectedCode + C.N);
+            out.append(COut.packageName);
+            if (object.getSuperclass() != null)
+                out.append(object.getSuperclass().getProcessedName());
+            else if (AdvisorMediator.isCFOpaqueType(object.name))
+                out.append("CFType");
+            else
+                out.append("NSObject");
+            out.append("_INTERNAL_CONSTRUCTOR(me, wrappedObj);" + C.NT);
+            if (!finalInjectedCode.toString().isEmpty())
+                out.append(finalInjectedCode + C.N);
+        }
 
         out.append("}" + C.N);
     }

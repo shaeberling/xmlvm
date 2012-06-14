@@ -98,6 +98,7 @@ public class Advisor extends DefaultHandler {
     boolean isSelector = false;
     private boolean isInjectedMethod = false;
     private boolean isOverridden = false;
+    private boolean isInternalCon = false;
     
     //
     private static String lastfile;
@@ -229,10 +230,13 @@ public class Advisor extends DefaultHandler {
             injectedCode = new StringBuilder();
             language = at.getValue("language");
             mode = at.getValue("mode");
+            if(isInternalCon)
+                mode = "internal-constructor" + mode;
             currentElement  = true;
         } else if(qName.equals("opaque")) {
             opaqueBaseType = at.getValue("base-type");
-        }
+        } else if(qName.equals("internal-constructor"))
+            isInternalCon = true;
         
     }
 
@@ -311,7 +315,7 @@ public class Advisor extends DefaultHandler {
                 globalCodeList.add(code);
             }
             injectedCode = null;
-            currentElement = false;
+            isInternalCon = currentElement = false;
         }
        
     }

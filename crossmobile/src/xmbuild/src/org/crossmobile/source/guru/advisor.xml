@@ -422,43 +422,51 @@
         and hence the injection of the below code is required.
          -->
         <code language="c" mode="after">
-            <![CDATA[@interface UIViewControllerWrapper (UIViewControllerWrapperCategory)
-            - (void) superLoadView;
-            - (void) superViewDidLoad;
-            - (void) superViewDidDisappear:(BOOL) animated;
-            @end
+            <![CDATA[
+@interface UIViewControllerWrapper (UIViewControllerWrapperCategory)
+- (void) superLoadView;
+- (void) superViewDidLoad;
+- (void) superViewDidDisappear:(BOOL) animated;
+@end
 
-            @implementation UIViewControllerWrapper (UIViewControllerWrapperCategory)
-            - (void) superLoadView {
-                [super loadView];
-            }
-            - (void) superViewDidLoad {
-                [super viewDidLoad];
-            }
-            - (void) superViewDidDisappear:(BOOL) animated{
-                [super viewDidDisappear:animated];
-            }
-            @end ]]>
+@implementation UIViewControllerWrapper (UIViewControllerWrapperCategory)
+- (void) superLoadView {
+	[super loadView];
+}
+- (void) superViewDidLoad {
+	[super viewDidLoad];
+}
+- (void) superViewDidDisappear:(BOOL) animated{
+	[super viewDidDisappear:animated];
+}
+@end
+]]>
         </code>
         
         <selector name="-loadView" delegate="true">
             <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                [thiz superLoadView]; ]]>
+                <![CDATA[
+	XMLVM_VAR_THIZ;
+    [thiz superLoadView]; 
+]]>
             </code>
         </selector>
         
         <selector name="-viewDidLoad" delegate="true">
             <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                [thiz superViewDidLoad]; ]]>
+                <![CDATA[
+	XMLVM_VAR_THIZ;
+    [thiz superViewDidLoad]; 
+]]>
             </code>
         </selector>
         
         <selector name="-viewDidDisappear:" delegate="true">
             <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                [thiz superViewDidDisappear:n1]; ]]>
+                <![CDATA[
+	XMLVM_VAR_THIZ;
+    [thiz superViewDidDisappear:n1]; 
+]]>
             </code>
         </selector>
         
@@ -469,7 +477,8 @@
     </class>    
     
     <!-- TODO: The information no-internal-constructor should be emitted from advisor.
-    This information will be compensated by adding code injection at class level -->
+    This information will be compensated by adding code injection at class level for
+    internal_constructor as it is done for NSTimer class-->
     
     <class name="NSObject" no-internal-constructor="true">
         <reference class="NSString"/>
@@ -477,9 +486,20 @@
         
         <selector name="-finalize" override="true">
             <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                [thiz removeExtraMembers];
-                [thiz release];]]>
+                <![CDATA[
+	// The finalizer is called from the finalizer thread. We need to make sure that
+	// the 'release' of the wrapped object happens on the main UI thread. This is
+	// important for iOS UI classes. Not releasing iOS UI objects on the UI thread
+	// seems to cause a leak in iOS. It is important to remove the extra members already
+	// here. Otherwise a race condition might occur where the destruction of the
+	// object is scheduled on the UI thread and before this happens from somewhere
+	// else xmlvm_get_accociated_c_oject() is called. This would return an invalid
+	// C pointer since the C object is immediately freed after the finalizer has run.
+	XMLVM_VAR_THIZ;
+	[thiz removeExtraMembers];
+	FinalizerObject* f = [[FinalizerObject alloc] initWithParams:thiz];
+	[f performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:FALSE];
+]]>
             </code>
         </selector>
     </class>
@@ -496,13 +516,15 @@
             UIControlDelegate is an externally injected file, and hence code injection 
             becomes necessary here -->   
             <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                org_xmlvm_ios_UIControlDelegate_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_UIControlDelegate(n1);
-                [jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];
-                [thiz addTarget:jwrapper->nativeDelegateWrapper_ action:@selector(raiseEvent:control:) forControlEvents:n2];
-    			objc_setAssociatedObject(thiz, &key, jwrapper->nativeDelegateWrapper_, OBJC_ASSOCIATION_RETAIN);
-    			[jwrapper->nativeDelegateWrapper_ release];
-    			XMLVMUtil_ArrayList_add(reference_array,n1);]]>
+                <![CDATA[
+    XMLVM_VAR_THIZ;
+    org_xmlvm_ios_UIControlDelegate_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_UIControlDelegate(n1);
+    [jwrapper->nativeDelegateWrapper_ addSource: jthiz: thiz];
+    [thiz addTarget:jwrapper->nativeDelegateWrapper_ action:@selector(raiseEvent:control:) forControlEvents:n2];
+	objc_setAssociatedObject(thiz, &key, jwrapper->nativeDelegateWrapper_, OBJC_ASSOCIATION_RETAIN);
+	[jwrapper->nativeDelegateWrapper_ release];
+	XMLVMUtil_ArrayList_add(reference_array,n1);
+]]>
             </code>
         </selector>            
     </class>
@@ -515,11 +537,21 @@
     
     	<code language="c" mode="header">
     		<![CDATA[bool alloced;
-    		// Set this flag to true if NSTimer is created using alloc/init 
-    		// in which case the instance has to be released in the finalize. 
-    		// If the NSTimer was created using the helper methods, the finalize 
-    		// need not release he instance since it is taken care of by iOS]]>
+	// Set this flag to true if NSTimer is created using alloc/init 
+	// in which case the instance has to be released in the finalize. 
+	// If the NSTimer was created using the helper methods, the finalize 
+	// need not release he instance since it is taken care of by iOS
+]]>
     	</code>
+    	
+    	<internal-constructor>
+	    	<code language="c" mode="after">
+	    		<![CDATA[
+	org_xmlvm_ios_NSTimer* jthiz = me;
+    jthiz->fields.org_xmlvm_ios_NSTimer.alloced = false;
+]]>
+	    	</code>
+    	</internal-constructor>
     	
     	<alias name="__NSCFTimer"/>
     	
@@ -531,16 +563,27 @@
     			<arg type="boolean"/>
     		</signature>
     		<code language="c" mode="replace">
-    			<![CDATA[org_xmlvm_ios_NSTimerDelegate_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_NSTimerDelegate(n2);
-				org_xmlvm_ios_NSTimer* timer = __NEW_org_xmlvm_ios_NSTimer();
-				NSTimer* nsTimer = [NSTimer scheduledTimerWithTimeInterval:n1 target:jwrapper->nativeDelegateWrapper_ selector:@selector(timerEvent:) userInfo:NULL repeats:n4];
-				objc_setAssociatedObject(nsTimer, &key, jwrapper->nativeDelegateWrapper_, OBJC_ASSOCIATION_RETAIN);
-				[jwrapper->nativeDelegateWrapper_ release];
-				org_xmlvm_ios_NSObject_INTERNAL_CONSTRUCTOR(timer, nsTimer);
-				timer->fields.org_xmlvm_ios_NSTimer.alloced = false;
-				XMLVMUtil_ArrayList_add(reference_array,n2);
-				return timer;]]>
+    			<![CDATA[
+	org_xmlvm_ios_NSTimerDelegate_Wrapper* jwrapper = __ALLOC_INIT_DELEGATE_WRAPPER_org_xmlvm_ios_NSTimerDelegate(n2);
+	org_xmlvm_ios_NSTimer* timer = __NEW_org_xmlvm_ios_NSTimer();
+	NSTimer* nsTimer = [NSTimer scheduledTimerWithTimeInterval:n1 target:jwrapper->nativeDelegateWrapper_ selector:@selector(timerEvent:) userInfo:NULL repeats:n4];
+	objc_setAssociatedObject(nsTimer, &key, jwrapper->nativeDelegateWrapper_, OBJC_ASSOCIATION_RETAIN);
+	[jwrapper->nativeDelegateWrapper_ release];
+	org_xmlvm_ios_NSObject_INTERNAL_CONSTRUCTOR(timer, nsTimer);
+	timer->fields.org_xmlvm_ios_NSTimer.alloced = false;
+	XMLVMUtil_ArrayList_add(reference_array, n2); // Store reference to delegate
+	XMLVMUtil_ArrayList_add(reference_array, timer); // Store reference to NSTimer object
+	return timer;
+]]>
     		</code>		
+    	</selector>
+    	
+    	<selector name="-invalidate">
+    		<code language="c" mode="after">
+    			<![CDATA[
+	XMLVMUtil_ArrayList_remove(reference_array, jthiz);
+]]>
+    		</code>
     	</selector>
     	
     	<injected-method name="finalize" modifier="public" override="true">
@@ -548,11 +591,13 @@
                 <return type="void"/>
             </signature>
             <code language="c" mode="replace">
-                <![CDATA[XMLVM_VAR_THIZ;
-                if(jthiz->fields.org_xmlvm_ios_NSTimer.alloced) {
-                	[thiz removeExtraMembers];
-                	[thiz release];
-                }]]>
+                <![CDATA[
+	XMLVM_VAR_THIZ;
+    if(jthiz->fields.org_xmlvm_ios_NSTimer.alloced) {
+    	[thiz removeExtraMembers];
+        [thiz release];
+    }
+]]>
             </code>
         </injected-method>
     </class>
@@ -589,7 +634,9 @@
                 <return type="String"/>
             </signature>
             <code language="c" mode="replace">
-                <![CDATA[return fromNSString(((org_xmlvm_ios_NSObject*) me)->fields.org_xmlvm_ios_NSObject.wrappedObj);]]>
+                <![CDATA[
+	return fromNSString(((org_xmlvm_ios_NSObject*) me)->fields.org_xmlvm_ios_NSObject.wrappedObj);
+]]>
             </code>
         </injected-method>
     </class>
@@ -754,10 +801,12 @@
                 <return type="void"/>
             </signature>
             <code language="c" mode="replace">
-                <![CDATA[setAppToRun((*(JAVA_OBJECT (*)(JAVA_OBJECT)) ((java_lang_Class*) n3)->tib->vtable[XMLVM_VTABLE_IDX_java_lang_Class_newInstance__])(n3));
-                NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-                UIApplicationMain(0 /*argc*/, nil /*argv*/, @"UIApplication", @"UIApplicationDelegateWrapper");
-                [pool release]; ]]>
+                <![CDATA[
+	setAppToRun((*(JAVA_OBJECT (*)(JAVA_OBJECT)) ((java_lang_Class*) n3)->tib->vtable[XMLVM_VTABLE_IDX_java_lang_Class_newInstance__])(n3));
+    NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+    UIApplicationMain(0 /*argc*/, nil /*argv*/, @"UIApplication", @"UIApplicationDelegateWrapper");
+    [pool release]; 
+]]>
             </code>
         </injected-method>
         
@@ -1057,6 +1106,9 @@
         <opaque base-type = "CFType"/>
     </class>
 
+	<!-- Currently the internal constructor for NSObject and CFType are defined in xmlvm-ios.m
+	This should be moved to the advisor using <internal-constructor> tag to inject the code
+	like used in case of NSTimer -->
     <class name="CFType" no-internal-constructor="true"/> 
     
     <class name = "NSStream">
@@ -1077,12 +1129,15 @@
      <class name = "UIWindow">
      
         <code language="c" mode="after">
-                <![CDATA[JAVA_OBJECT window;]]>
+                <![CDATA[
+JAVA_OBJECT window;
+]]>
         </code>
             
     	<selector name = "-initWithFrame:">
     	    <code language="c" mode="after">
-                <![CDATA[window = me;]]>
+                <![CDATA[
+	window = me;]]>
             </code>
     	</selector>
     </class>  

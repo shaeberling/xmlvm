@@ -161,7 +161,7 @@ public class CMethodOut {
             methodCall = methodType.emit(method, CStruct.isStruct(object.name), methodHelper);
 
             CMethodHelper.setCodeForInjection(method.getSelectorName(), currObject.name, true,
-                    initialInjectedCode, replaceableCode, finalInjectedCode);
+                    false, initialInjectedCode, replaceableCode, finalInjectedCode);
 
             if (methodCall == null)
                 notImplemented = true;
