@@ -157,9 +157,11 @@ public class SkeletonCreator extends Task {
         if(files == null)
             throw new BuildException("The folder containing the code to be copied is missing");
         for(int i=0; i<files.length; i++){
-            FileChannel in = new FileInputStream(files[i]).getChannel();
-            FileChannel out = new FileOutputStream(outdir +File.separatorChar+files[i].getName()).getChannel();
-            in.transferTo(0, in.size(), out);
+            if(!files[i].isDirectory()) {
+                FileChannel in = new FileInputStream(files[i]).getChannel();
+                FileChannel out = new FileOutputStream(outdir +File.separatorChar+files[i].getName()).getChannel();
+                in.transferTo(0, in.size(), out);
+            }
         }
     }
 
