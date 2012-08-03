@@ -20,6 +20,7 @@
 
 package org.crossmobile.source.out.cutils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -31,6 +32,7 @@ import org.crossmobile.source.ctype.CType;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.out.COut;
 import org.crossmobile.source.xtype.AdvisorMediator;
+import org.crossmobile.source.xtype.XArg;
 import org.crossmobile.source.xtype.XCode;
 
 /**
@@ -359,5 +361,23 @@ public class CMethodHelper {
             }
 
         }
+    }
+    
+    /**
+     * Helper method to convert a list of XArg to a list of XArguments.
+     *
+     * The name of result arguments are "arg0", "arg1"...
+     *
+     * @param arguments a list of XArg
+     * @return a list of XArgument
+     *
+     */
+    public static List<CArgument> convertCArgumentListToXArgList(List<XArg> arguments) {
+        List<CArgument> result = new ArrayList<CArgument>(arguments.size());
+        for (int i  = 0; i < arguments.size(); i++) {
+            XArg arg = arguments.get(i);
+            result.add(new CArgument(new CType(arg.getType()), "arg" + i));
+        }
+        return result;
     }
 }

@@ -38,6 +38,7 @@ import org.crossmobile.source.ctype.ObjCSelector.Parameter;
 import org.crossmobile.source.guru.Advisor;
 import org.crossmobile.source.guru.Reporter;
 import org.crossmobile.source.guru.Reporter.Tuplet;
+import org.crossmobile.source.out.cutils.CMethodHelper;
 import org.crossmobile.source.out.cutils.ObjCSelectorUtil;
 import org.crossmobile.source.utils.FileUtils;
 import org.crossmobile.source.utils.WriteCallBack;
@@ -343,14 +344,14 @@ public class JavaOut implements Generator {
      */
     private void parseSuperClassConstructor(CObject superclass, CObject object, CLibrary lib, Map<String, Boolean> subclassArgTypes, Writer out) throws IOException {        
         for (CConstructor c : superclass.getConstructors()) {
-            if (!c.getArguments().isEmpty()) {
-                List<CArgument> args = c.getArguments();
+            List<CArgument> args = getConstructorArguments(superclass, c);
+            if (!args.isEmpty()) {
                 int size = args.size();
                 
                 if(subclassArgTypes.containsKey(c.getCommaSeparatedArgumentTypes()))
-                    continue;               
+                    continue;
                 out.append("\tpublic ").append(object.name + "(");
-                parseArgumentList(c.getArguments(), superclass, c.getEnum(), lib, out);
+                parseArgumentList(args, superclass, c.getEnum(), lib, out);
                 out.append(") {\n\t\t").append("super(");
                 for (int i = 0; i < args.size(); i++) {
                     out.append(args.get(i).name);
@@ -553,10 +554,11 @@ public class JavaOut implements Generator {
     }
 
     private void parseConstructor(CObject parent, CConstructor c, CLibrary lib, Writer out) throws IOException {
+        List<CArgument> args = getConstructorArguments(parent, c);
         out.append(constructorprefix);
         parseJavadoc(c.getDefinitions(), out);
         out.append("\tpublic ").append(parent.getName()).append("(");
-        parseArgumentList(c.getArguments(), parent, c.getEnum(), lib, out);
+        parseArgumentList(args, parent, c.getEnum(), lib, out);
         out.append(") {}\n");
     }
 
@@ -637,6 +639,16 @@ public class JavaOut implements Generator {
                 out.append(">").append(item.value).append("</item>\n");
             }
             out.append("</context>\n");
+        }
+    }
+
+    private List<CArgument>getConstructorArguments(CObject parent, CConstructor c) {
+        if (AdvisorMediator.hasSpecialArgumentsDefined(c.getSelectorName(), parent.name, false)) {
+            return CMethodHelper.convertCArgumentListToXArgList(
+                    AdvisorMediator.getArgumentsForMethod(
+                            c.getSelectorName(), parent.name));
+        } else {
+            return c.getArguments();
         }
     }
     

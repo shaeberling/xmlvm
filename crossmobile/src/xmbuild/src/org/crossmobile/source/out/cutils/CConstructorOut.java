@@ -133,48 +133,57 @@ public class CConstructorOut {
             CMethodHelper.setCodeForInjection(con.getSelectorName(), object.name, true, false,
                     initialInjectedCode, replaceableCode, finalInjectedCode);
 
-            if (!replaceableCode.toString().isEmpty()) {
-                out.append(replaceableCode);
-                continue;
-            }
-
             if (!AdvisorMediator.methodIsIgnore(con.getSelectorName(), object.name)) {
                 if (subclassArgType != null
                         && subclassArgType.containsKey(con.getCommaSeparatedArgumentTypes()))
                     continue;
 
-                arguments = con.getArguments();
+                if (AdvisorMediator.hasSpecialArgumentsDefined(con.getSelectorName(),
+                                object.name, false)) {
+                    arguments = CMethodHelper.convertCArgumentListToXArgList(
+                            AdvisorMediator.getArgumentsForMethod(
+                                    con.getSelectorName(), object.name));
+                } else {
+                    arguments = con.getArguments();
+                }
 
                 cEnum = con.getEnum();
                 if (cEnum != null)
                     namePartsMap = cEnum.getNameParts();
 
-                if (!initialInjectedCode.toString().isEmpty())
-                    out.append(initialInjectedCode);
-
                 out.append(CUtilsHelper.getWrapperComment(arguments, object.getcClassName(),
                         cEnum == null ? null : cEnum.name));
 
-                if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
-                    out.append(C.AUTORELEASEPOOL_ALLOC);
-
-                if (CStruct.isStruct(currentObj.name)
-                        || AdvisorMediator.isCFOpaqueType(object.name)) {
-                    emitStructConstructor(arguments, AdvisorMediator.isCFOpaqueType(object.name));
+                if (!replaceableCode.toString().isEmpty()) {
+                    out.append(replaceableCode);
+                    out.append(C.N);
                 } else {
-                    if (arguments.isEmpty())
-                        has_default_constructor = true;
+                    if (!initialInjectedCode.toString().isEmpty())
+                        out.append(initialInjectedCode);
 
-                    if (con.isOverloaded() && cEnum != null)
-                        emitOverloadedConstructor(cEnum.name, namePartsMap, arguments);
-                    else
-                        emitObjectConstructor(con.getNameParts(), arguments);
+                    if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
+                        out.append(C.AUTORELEASEPOOL_ALLOC);
+
+                    if (CStruct.isStruct(currentObj.name)
+                            || AdvisorMediator.isCFOpaqueType(object.name)) {
+                        emitStructConstructor(arguments, AdvisorMediator.isCFOpaqueType(object.name));
+                    } else {
+                        if (arguments.isEmpty())
+                            has_default_constructor = true;
+
+                        if (con.isOverloaded() && cEnum != null)
+                            emitOverloadedConstructor(cEnum.name, namePartsMap, arguments);
+                        else
+                            emitObjectConstructor(con.getNameParts(), arguments);
+                    }
+                    if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
+                        out.append(C.AUTORELEASEPOOL_RELEASE);
+
+                    if (!finalInjectedCode.toString().isEmpty()) {
+                        out.append(finalInjectedCode);
+                        out.append(C.N);
+                    }
                 }
-                if (AdvisorMediator.needsAutoReleasePool(con.getSelectorName(), object.name))
-                    out.append(C.AUTORELEASEPOOL_RELEASE);
-
-                if (!finalInjectedCode.toString().isEmpty())
-                    out.append(finalInjectedCode);
 
                 out.append(C.END_WRAPPER + C.N);
 

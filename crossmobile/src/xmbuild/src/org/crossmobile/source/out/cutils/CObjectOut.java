@@ -88,6 +88,21 @@ public class CObjectOut {
                 if (AdvisorMediator.getOpaqueBaseType(object.name) == null)
                     emitWrapperRegistration();
                 emitObjectDeletion();
+            } else if (!replaceableCode.toString().isEmpty() ||
+                    !initialInjectedCode.toString().isEmpty() ||
+                    !finalInjectedCode.toString().isEmpty()) {
+                out.append(C.BEGIN_IMPL + C.N);
+
+                if (!replaceableCode.toString().isEmpty()) {
+                    out.append(replaceableCode);
+                } else {
+                    if (!initialInjectedCode.toString().isEmpty())
+                        out.append(initialInjectedCode + C.N);
+
+                    if (!finalInjectedCode.toString().isEmpty())
+                        out.append(finalInjectedCode);
+                }
+                out.append(C.END_IMPL + C.N);
             }
 
             CConstructorOut cConsOut = new CConstructorOut(out, lib, object);
